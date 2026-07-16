@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  /* Vantex Premium Dark Palette Tokens for v4 */
+  --color-nexusDark: #090d16;
+  --color-nexusCard: #111827;
+  --color-nexusAccent: #6366f1;
+}
+
+body {
+  background-color: var(--color-nexusDark);
+  color: #f8fafc;
+  overflow-x: hidden;
+}
