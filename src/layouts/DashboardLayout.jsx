@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }) {
           <div className="text-sm font-medium text-slate-400">Operations Control Center</div>
           <div className="flex items-center gap-4">
             <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 1)</span>
+            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 2)</span>
           </div>
         </header>
 

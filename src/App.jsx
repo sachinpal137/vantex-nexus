@@ -1,6 +1,7 @@
 import React from 'react';
 import DashboardLayout from './layouts/DashboardLayout';
 import MetricsGrid from './components/MetricsGrid';
+import AnalyticsChart from './components/AnalyticsChart';
 
 export default function App() {
   return (
@@ -14,13 +15,8 @@ export default function App() {
       {/* Dynamic Analytical Widgets Section */}
       <MetricsGrid />
 
-      {/* Main Feature Content Placeholder (Next up: Graphs & Pipelines) */}
-      <div className="border border-dashed border-slate-800/80 rounded-xl h-[45vh] flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-sm">
-        <h3 className="text-lg font-semibold text-slate-300 mb-1">Project Pipelines & Chart Engine</h3>
-        <p className="text-slate-500 text-xs max-w-xs text-center">
-          Ready to inject the interactive revenue charts and dynamic Kanban drag-drop boards.
-        </p>
-      </div>
+      {/* Interactive Chart Engine Section */}
+      <AnalyticsChart />
     </DashboardLayout>
   );
 }
