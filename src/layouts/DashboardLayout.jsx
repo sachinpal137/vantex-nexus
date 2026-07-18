@@ -1,6 +1,16 @@
 import React from 'react';
 
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout({ children, currentView, onViewChange }) {
+  // Common helper class to handle clean navigation active/inactive states without layout shifts
+  const getNavClass = (viewName) => {
+    const isMainActive = currentView === viewName;
+    return `flex items-center gap-3 px-4 py-3 cursor-pointer font-medium text-sm transition-all border-l-2 
+      ${isMainActive 
+        ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400 rounded-r-md' 
+        : 'text-slate-400 border-transparent hover:bg-slate-800/50 hover:text-slate-200 rounded-md'
+      }`;
+  };
+
   return (
     <div className="min-h-screen flex bg-[#090d16] text-slate-100 font-sans">
       {/* 1. Left Sidebar Navigation */}
@@ -14,13 +24,24 @@ export default function DashboardLayout({ children }) {
           
           {/* Navigation Links */}
           <nav className="space-y-2">
-            <div className="flex items-center gap-3 px-4 py-3 bg-indigo-600/10 border-l-2 border-indigo-500 text-indigo-400 rounded-r-md cursor-pointer font-medium text-sm transition-all">
+            {/* Overview Dashboard Tab */}
+            <div 
+              onClick={() => onViewChange('dashboard')}
+              className={getNavClass('dashboard')}
+            >
               <span>📊</span> Overview Dashboard
             </div>
-            <div className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 rounded-md cursor-pointer font-medium text-sm transition-all">
+
+            {/* Task Kanban Tab */}
+            <div 
+              onClick={() => onViewChange('kanban')}
+              className={getNavClass('kanban')}
+            >
               <span>📋</span> Task Kanban
             </div>
-            <div className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 rounded-md cursor-pointer font-medium text-sm transition-all">
+
+            {/* Invoice Vault Tab (Placeholder for Future Step) */}
+            <div className="flex items-center gap-3 px-4 py-3 text-slate-600 border-l-2 border-transparent cursor-not-allowed font-medium text-sm opacity-50 select-none">
               <span>🧾</span> Invoice Vault
             </div>
           </nav>
@@ -43,7 +64,7 @@ export default function DashboardLayout({ children }) {
           <div className="text-sm font-medium text-slate-400">Operations Control Center</div>
           <div className="flex items-center gap-4">
             <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 2)</span>
+            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 3)</span>
           </div>
         </header>
 
