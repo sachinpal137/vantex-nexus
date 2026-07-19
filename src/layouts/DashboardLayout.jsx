@@ -40,8 +40,11 @@ export default function DashboardLayout({ children, currentView, onViewChange })
               <span>📋</span> Task Kanban
             </div>
 
-            {/* Invoice Vault Tab (Placeholder for Future Step) */}
-            <div className="flex items-center gap-3 px-4 py-3 text-slate-600 border-l-2 border-transparent cursor-not-allowed font-medium text-sm opacity-50 select-none">
+            {/* Invoice Vault Tab (UNLOCKED FOR DAY 4 ENGINE) */}
+            <div 
+              onClick={() => onViewChange('invoices')}
+              className={getNavClass('invoices')}
+            >
               <span>🧾</span> Invoice Vault
             </div>
           </nav>
@@ -64,7 +67,7 @@ export default function DashboardLayout({ children, currentView, onViewChange })
           <div className="text-sm font-medium text-slate-400">Operations Control Center</div>
           <div className="flex items-center gap-4">
             <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 3)</span>
+            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 4)</span>
           </div>
         </header>
 
