@@ -47,6 +47,14 @@ export default function DashboardLayout({ children, currentView, onViewChange })
             >
               <span>🧾</span> Invoice Vault
             </div>
+
+            {/* Expense Matrix Tab (UNLOCKED FOR DAY 5 ENGINE) 👈 Added */}
+            <div 
+              onClick={() => onViewChange('expenses')}
+              className={getNavClass('expenses')}
+            >
+              <span>💸</span> Expense Matrix
+            </div>
           </nav>
         </div>
         
@@ -67,7 +75,7 @@ export default function DashboardLayout({ children, currentView, onViewChange })
           <div className="text-sm font-medium text-slate-400">Operations Control Center</div>
           <div className="flex items-center gap-4">
             <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 4)</span>
+            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 5)</span>
           </div>
         </header>
 
