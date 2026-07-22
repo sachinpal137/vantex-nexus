@@ -5,11 +5,12 @@ import AnalyticsChart from './components/AnalyticsChart';
 import TaskKanban from './components/TaskKanban'; // Day 3 Pipeline Engine
 import InvoiceVault from './components/InvoiceVault'; // Day 4 Billing Engine
 import ExpenseMatrix from './components/ExpenseMatrix'; // Day 5 Financial Engine Added
-import ClientHub from './components/ClientHub'; // 👈 Day 6 CRM Engine Added
+import ClientHub from './components/ClientHub'; // Day 6 CRM Engine Added
+import SettingsHub from './components/SettingsHub'; // 👈 Day 7 Data Management Added
 
 export default function App() {
   // Global view state to manage workspace toggling
-  // Supported States: 'dashboard' | 'kanban' | 'invoices' | 'expenses' | 'clients'
+  // Supported States: 'dashboard' | 'kanban' | 'invoices' | 'expenses' | 'clients' | 'settings'
   const [currentView, setCurrentView] = useState('dashboard');
 
   // 🔄 Day 4 & Day 5 Data Bridge: Live Revenue calculation from localStorage
@@ -61,8 +62,11 @@ export default function App() {
         <ExpenseMatrix totalInvoiceRevenue={totalPaidRevenue} />
       )}
 
-      {/* 5. CLIENT HUB (MINI CRM) STREAM 👈 Day 6 Integration */}
+      {/* 5. CLIENT HUB (MINI CRM) STREAM */}
       {currentView === 'clients' && <ClientHub />}
+
+      {/* 6. SETTINGS & DATA HUB STREAM 👈 Day 7 Integration */}
+      {currentView === 'settings' && <SettingsHub />}
 
     </DashboardLayout>
   );

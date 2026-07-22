@@ -56,12 +56,20 @@ export default function DashboardLayout({ children, currentView, onViewChange })
               <span>💸</span> Expense Matrix
             </div>
 
-            {/* Client Hub Tab (UNLOCKED FOR DAY 6 ENGINE) 👈 Added */}
+            {/* Client Hub Tab (UNLOCKED FOR DAY 6 ENGINE) */}
             <div 
               onClick={() => onViewChange('clients')}
               className={getNavClass('clients')}
             >
               <span>👥</span> Client Hub
+            </div>
+
+            {/* Settings & Data Hub Tab (UNLOCKED FOR DAY 7 ENGINE) 👈 Added */}
+            <div 
+              onClick={() => onViewChange('settings')}
+              className={getNavClass('settings')}
+            >
+              <span>⚙️</span> Settings & Data
             </div>
           </nav>
         </div>
@@ -83,8 +91,8 @@ export default function DashboardLayout({ children, currentView, onViewChange })
           <div className="text-sm font-medium text-slate-400">Operations Control Center</div>
           <div className="flex items-center gap-4">
             <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            {/* 👈 Updated to DAY 6 */}
-            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 6)</span>
+            {/* 👈 Updated to DAY 7 */}
+            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 7)</span>
           </div>
         </header>
 
