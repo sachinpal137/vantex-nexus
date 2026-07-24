@@ -12,32 +12,28 @@ export default function ClientHub() {
     value: ''
   });
 
-  // Load initial data
+  // 🚀 1. BACKEND SE LIVE DATA FETCH KARNA
   useEffect(() => {
-    const saved = localStorage.getItem('vantex_clients');
-    if (saved) {
-      setClients(JSON.parse(saved));
-    } else {
-      // Dummy data for initial showcase
-      setClients([
-        { id: 1, name: 'Rahul Sharma', company: 'TechNova', email: 'rahul@technova.in', status: 'Active', value: '45000' },
-        { id: 2, name: 'Priya Desai', company: 'Desai Retail', email: 'priya@desairetail.com', status: 'Lead', value: '120000' }
-      ]);
-    }
+    fetch('http://localhost:3000/clients')
+      .then((res) => {
+        if (!res.ok) throw new Error("Network response was not ok");
+        return res.json();
+      })
+      .then((data) => {
+        console.log("🔥 Backend se Live Data aa gaya:", data); // F12 me check karne ke liye
+        setClients(data); 
+      })
+      .catch((err) => console.error("API Error - Ensure Backend is running on port 3000:", err));
   }, []);
 
-  // Save on change
-  useEffect(() => {
-    if (clients.length > 0) {
-      localStorage.setItem('vantex_clients', JSON.stringify(clients));
-    }
-  }, [clients]);
-
+  // 🚧 Abhi ke liye Add button UI me data add karega (POST API hum agle step me lagayenge)
   const handleSubmit = (e) => {
     e.preventDefault();
     const newClient = {
       id: Date.now(),
-      ...formData
+      ...formData,
+      invoices: [], // Default arrays to prevent undefined errors
+      tasks: []
     };
     setClients([newClient, ...clients]);
     setIsAdding(false);
@@ -53,8 +49,8 @@ export default function ClientHub() {
     }
   };
 
-  // Helper to get initials for the auto-avatar
   const getInitials = (name) => {
+    if (!name) return 'UN';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
@@ -77,7 +73,7 @@ export default function ClientHub() {
         </button>
       </div>
 
-      {/* Add Client Form (Expands when button clicked) */}
+      {/* Add Client Form */}
       {isAdding && (
         <form onSubmit={handleSubmit} className="bg-slate-900/60 border border-indigo-500/30 p-6 rounded-2xl shadow-2xl backdrop-blur-sm grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2 border-b border-slate-800 pb-2 mb-2">
@@ -113,7 +109,7 @@ export default function ClientHub() {
 
           <div className="md:col-span-2 mt-2">
             <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-lg transition-colors">
-              Save Client Profile
+              Save Client Profile (UI Only)
             </button>
           </div>
         </form>
@@ -125,7 +121,6 @@ export default function ClientHub() {
           <div key={client.id} className="bg-slate-900/40 border border-slate-800/60 p-5 rounded-2xl hover:border-slate-700 transition-all flex flex-col justify-between group">
             <div className="flex justify-between items-start">
               <div className="flex gap-4 items-center">
-                {/* Auto-generated Avatar */}
                 <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-bold text-lg group-hover:scale-105 transition-transform">
                   {getInitials(client.name)}
                 </div>
@@ -134,25 +129,32 @@ export default function ClientHub() {
                   <p className="text-sm text-slate-400">{client.company || 'Independent'}</p>
                 </div>
               </div>
-              <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(client.status)}`}>
-                {client.status}
+              <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(client.status || 'Active')}`}>
+                {client.status || 'Active'}
               </span>
             </div>
             
-            <div className="mt-5 pt-4 border-t border-slate-800/60 flex justify-between items-center text-sm">
-              <div className="flex items-center gap-2 text-slate-400">
-                <span>📧</span> {client.email || 'No email added'}
+            {/* 🚀 2. BACKEND RELATIONAL DATA (INVOICES & TASKS) */}
+            <div className="mt-4 pt-4 border-t border-slate-800/60 flex justify-between items-center text-sm">
+              <div className="flex gap-3 text-xs">
+                <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded">
+                  🧾 Invoices: {client.invoices?.length || 0}
+                </span>
+                <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded">
+                  ✅ Tasks: {client.tasks?.length || 0}
+                </span>
               </div>
               <div className="font-semibold text-slate-300">
-                Deal: <span className="text-emerald-400">₹{Number(client.value).toLocaleString('en-IN') || '0'}</span>
+                <span className="text-emerald-400">₹{Number(client.value || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>
+            
           </div>
         ))}
         
         {clients.length === 0 && !isAdding && (
           <div className="col-span-2 text-center py-12 text-slate-500 border border-dashed border-slate-800 rounded-2xl">
-            No clients added yet. Start building your rolodex.
+            Loading Clients from Backend...
           </div>
         )}
       </div>

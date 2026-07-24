@@ -1,12 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function MetricsGrid() {
-  // Vantex Solutions ke live metrics ka temporary mock data
+  // Backend se real client count store karne ke liye state
+  const [clientCount, setClientCount] = useState('...');
+
+  // Component load hote hi backend API (Prisma/Supabase) ko call karenge
+  useEffect(() => {
+    //  FIX: Port 3000 aur sahi endpoint '/clients' kar diya gaya hai
+    fetch('http://localhost:3000/clients')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setClientCount(data.length); // Sahi count (jaise Aman Verma wala 1) set ho jayega
+        }
+      })
+      .catch(err => {
+        console.error("Backend connect nahi hua bhai:", err);
+        setClientCount('Offline');
+      });
+  }, []);
+
+  // Vantex Solutions ke metrics (Total Clients ab Supabase DB se connected hai!)
   const stats = [
     { title: 'Total Revenue', value: '₹4,85,000', change: '+12.5%', isPositive: true, icon: '💼' },
     { title: 'Active Pipelines', value: '8 Projects', change: '2 in QA', isPositive: true, icon: '⚡' },
     { title: 'Pending Invoices', value: '3 Unpaid', change: '₹42,000 due', isPositive: false, icon: '⏳' },
-    { title: 'Total Clients', value: '14 Active', change: '+2 new', isPositive: true, icon: '👥' },
+    { title: 'Total Clients', value: `${clientCount} Active`, change: 'Live DB 🟢', isPositive: true, icon: '👥' },
   ];
 
   return (
