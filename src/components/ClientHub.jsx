@@ -12,7 +12,6 @@ export default function ClientHub() {
     value: ''
   });
 
-  // 🚀 1. BACKEND SE LIVE DATA FETCH KARNA
   useEffect(() => {
     fetch('http://localhost:3000/clients')
       .then((res) => {
@@ -20,24 +19,37 @@ export default function ClientHub() {
         return res.json();
       })
       .then((data) => {
-        console.log("🔥 Backend se Live Data aa gaya:", data); // F12 me check karne ke liye
         setClients(data); 
       })
-      .catch((err) => console.error("API Error - Ensure Backend is running on port 3000:", err));
+      .catch((err) => console.error("Error fetching client data:", err));
   }, []);
 
-  // 🚧 Abhi ke liye Add button UI me data add karega (POST API hum agle step me lagayenge)
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newClient = {
-      id: Date.now(),
-      ...formData,
-      invoices: [], // Default arrays to prevent undefined errors
-      tasks: []
-    };
-    setClients([newClient, ...clients]);
-    setIsAdding(false);
-    setFormData({ name: '', company: '', email: '', status: 'Lead', value: '' });
+    
+    try {
+      const response = await fetch('http://localhost:3000/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) throw new Error("Network response was not ok");
+
+      const savedClient = await response.json();
+      
+      savedClient.invoices = [];
+      savedClient.tasks = [];
+
+      setClients([savedClient, ...clients]);
+      setIsAdding(false);
+      setFormData({ name: '', company: '', email: '', status: 'Lead', value: '' });
+      
+    } catch (error) {
+      console.error("Failed to add client:", error);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -54,10 +66,23 @@ export default function ClientHub() {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
+  const getInvoiceTotal = (client) => {
+    const total = client.invoices?.reduce((sum, invoice) => {
+      return sum + (Number(invoice.amount) || 0);
+    }, 0);
+    
+    const finalAmount = total > 0 ? total : Number(client.value || 0);
+
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(finalAmount);
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* Header Area */}
       <div className="flex justify-between items-center bg-slate-900/50 p-6 rounded-2xl border border-slate-800/60 shadow-xl backdrop-blur-sm">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -73,7 +98,6 @@ export default function ClientHub() {
         </button>
       </div>
 
-      {/* Add Client Form */}
       {isAdding && (
         <form onSubmit={handleSubmit} className="bg-slate-900/60 border border-indigo-500/30 p-6 rounded-2xl shadow-2xl backdrop-blur-sm grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2 border-b border-slate-800 pb-2 mb-2">
@@ -109,13 +133,12 @@ export default function ClientHub() {
 
           <div className="md:col-span-2 mt-2">
             <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-lg transition-colors">
-              Save Client Profile (UI Only)
+              Save Client
             </button>
           </div>
         </form>
       )}
 
-      {/* Client Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {clients.map((client) => (
           <div key={client.id} className="bg-slate-900/40 border border-slate-800/60 p-5 rounded-2xl hover:border-slate-700 transition-all flex flex-col justify-between group">
@@ -134,7 +157,6 @@ export default function ClientHub() {
               </span>
             </div>
             
-            {/* 🚀 2. BACKEND RELATIONAL DATA (INVOICES & TASKS) */}
             <div className="mt-4 pt-4 border-t border-slate-800/60 flex justify-between items-center text-sm">
               <div className="flex gap-3 text-xs">
                 <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded">
@@ -145,7 +167,7 @@ export default function ClientHub() {
                 </span>
               </div>
               <div className="font-semibold text-slate-300">
-                <span className="text-emerald-400">₹{Number(client.value || 0).toLocaleString('en-IN')}</span>
+                <span className="text-emerald-400">{getInvoiceTotal(client)}</span>
               </div>
             </div>
             
@@ -154,7 +176,7 @@ export default function ClientHub() {
         
         {clients.length === 0 && !isAdding && (
           <div className="col-span-2 text-center py-12 text-slate-500 border border-dashed border-slate-800 rounded-2xl">
-            Loading Clients from Backend...
+            Loading Clients...
           </div>
         )}
       </div>

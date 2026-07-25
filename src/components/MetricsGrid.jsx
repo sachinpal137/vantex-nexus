@@ -1,31 +1,64 @@
 import React, { useState, useEffect } from 'react';
 
 export default function MetricsGrid() {
-  // Backend se real client count store karne ke liye state
-  const [clientCount, setClientCount] = useState('...');
+  // Backend se saare stats store karne ke liye ek object state
+  const [dashboardData, setDashboardData] = useState({
+    totalRevenue: 0,
+    activeProjects: 0,
+    pendingInvoices: 0,
+    totalClients: 0,
+    isLoading: true
+  });
 
-  // Component load hote hi backend API (Prisma/Supabase) ko call karenge
+  // Component load hote hi naya dashboard API call karenge
   useEffect(() => {
-    //  FIX: Port 3000 aur sahi endpoint '/clients' kar diya gaya hai
-    fetch('http://localhost:3000/clients')
+    fetch('http://localhost:3000/dashboard-stats')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          setClientCount(data.length); // Sahi count (jaise Aman Verma wala 1) set ho jayega
-        }
+        setDashboardData({
+          totalRevenue: data.totalRevenue || 0,
+          activeProjects: data.activeProjects || 0,
+          pendingInvoices: data.pendingInvoices || 0,
+          totalClients: data.totalClients || 0,
+          isLoading: false
+        });
       })
       .catch(err => {
-        console.error("Backend connect nahi hua bhai:", err);
-        setClientCount('Offline');
+        console.error("Dashboard API connect nahi hui bhai:", err);
+        setDashboardData(prev => ({ ...prev, isLoading: false }));
       });
   }, []);
 
-  // Vantex Solutions ke metrics (Total Clients ab Supabase DB se connected hai!)
+  // Vantex Solutions ke live metrics array
   const stats = [
-    { title: 'Total Revenue', value: '₹4,85,000', change: '+12.5%', isPositive: true, icon: '💼' },
-    { title: 'Active Pipelines', value: '8 Projects', change: '2 in QA', isPositive: true, icon: '⚡' },
-    { title: 'Pending Invoices', value: '3 Unpaid', change: '₹42,000 due', isPositive: false, icon: '⏳' },
-    { title: 'Total Clients', value: `${clientCount} Active`, change: 'Live DB 🟢', isPositive: true, icon: '👥' },
+    { 
+      title: 'Total Revenue', 
+      value: dashboardData.isLoading ? '...' : `₹${dashboardData.totalRevenue.toLocaleString('en-IN')}`, 
+      change: 'Live DB 🟢', 
+      isPositive: true, 
+      icon: '💼' 
+    },
+    { 
+      title: 'Active Pipelines', 
+      value: dashboardData.isLoading ? '...' : `${dashboardData.activeProjects} Projects`, 
+      change: 'Live DB 🟢', 
+      isPositive: true, 
+      icon: '⚡' 
+    },
+    { 
+      title: 'Pending Invoices', 
+      value: dashboardData.isLoading ? '...' : `${dashboardData.pendingInvoices} Unpaid`, 
+      change: dashboardData.pendingInvoices > 0 ? 'Action Needed' : 'All Clear ✨', 
+      isPositive: dashboardData.pendingInvoices === 0, 
+      icon: '⏳' 
+    },
+    { 
+      title: 'Total Clients', 
+      value: dashboardData.isLoading ? '...' : `${dashboardData.totalClients} Active`, 
+      change: 'Live DB 🟢', 
+      isPositive: true, 
+      icon: '👥' 
+    },
   ];
 
   return (
