@@ -7,20 +7,9 @@ const COLUMNS = [
   { id: 'won', title: 'Closed Won', color: 'border-l-4 border-l-emerald-500' }
 ];
 
-const DEFAULT_TASKS = [
-  { id: '1710000001', title: 'Salesforce LWC Integration', company: 'Apex Tech LLC', value: '₹1,20,000', status: 'lead', owner: 'Sachin' },
-  { id: '1710000002', title: 'Custom SVG Chart Module', company: 'Vantex Internal', value: '₹85,000', status: 'review', owner: 'Sachin' },
-  { id: '1710000003', title: 'Next.js E-Commerce Pipeline', company: 'Katni Traders', value: '₹2,10,000', status: 'proposal', owner: 'Ankit' },
-  { id: '1710000004', title: 'Dashboard UI Architecture', company: 'GGITS Portal', value: '₹95,000', status: 'won', owner: 'Sachin' },
-];
-
 export default function TaskKanban() {
-  // 1. Storage Engine Architecture
-  const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem('vantex_nexus_kanban');
-    return saved ? JSON.parse(saved) : DEFAULT_TASKS;
-  });
-
+  // 1. Storage Engine Architecture (Now connected to Live Database)
+  const [tasks, setTasks] = useState([]);
   const [activeColumn, setActiveColumn] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -30,11 +19,24 @@ export default function TaskKanban() {
   const [newValue, setNewValue] = useState('');
   const [newOwner, setNewOwner] = useState('Sachin');
 
-  useEffect(() => {
-    localStorage.setItem('vantex_nexus_kanban', JSON.stringify(tasks));
-  }, [tasks]);
+  const API_URL = 'http://localhost:3000/deals';
 
-  // 2. Drag & Drop Logic Handlers
+  // Fetch initial data on mount
+  useEffect(() => {
+    fetchDeals();
+  }, []);
+
+  const fetchDeals = async () => {
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+      setTasks(data);
+    } catch (error) {
+      console.error("Pipeline fetch failed:", error);
+    }
+  };
+
+  // 2. Drag & Drop Logic Handlers (Optimistic Updates)
   const handleDragStart = (e, id) => {
     e.dataTransfer.setData('text/plain', id);
     e.dataTransfer.effectAllowed = 'move';
@@ -45,45 +47,82 @@ export default function TaskKanban() {
     if (activeColumn !== columnId) setActiveColumn(columnId);
   };
 
-  const handleDrop = (e, targetStatus) => {
+  const handleDrop = async (e, targetStatus) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('text/plain');
     
+    // Optimistic UI update (Instant feedback)
     setTasks(prev => prev.map(task => 
       task.id === taskId ? { ...task, status: targetStatus } : task
     ));
     setActiveColumn(null);
+
+    // Background Database Sync
+    try {
+      await fetch(`${API_URL}/${taskId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: targetStatus })
+      });
+    } catch (error) {
+      console.error("Status update failed:", error);
+      fetchDeals(); // Revert back if DB update fails
+    }
   };
 
-  // 3. Form Submission & Custom ID Generator
-  const handleCreateDeal = (e) => {
+  // 3. Form Submission to Backend
+  const handleCreateDeal = async (e) => {
     e.preventDefault();
     if (!newTitle || !newCompany || !newValue) return;
 
-    // Formatting raw number to INR standard currency
-    const formattedValue = `₹${parseInt(newValue, 10).toLocaleString('en-IN')}`;
-
-    const newDeal = {
-      id: String(Date.now()),
+    const newDealData = {
       title: newTitle,
       company: newCompany,
-      value: formattedValue,
-      status: 'lead',
+      value: newValue, // Sending raw number, DB handles it
       owner: newOwner
     };
 
-    setTasks(prev => [newDeal, ...prev]);
-    
-    // Reset Form
-    setNewTitle('');
-    setNewCompany('');
-    setNewValue('');
-    setIsModalOpen(false);
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newDealData)
+      });
+      
+      if (response.ok) {
+        const savedDeal = await response.json();
+        setTasks(prev => [savedDeal, ...prev]);
+        
+        // Reset Form
+        setNewTitle('');
+        setNewCompany('');
+        setNewValue('');
+        setIsModalOpen(false);
+      }
+    } catch (error) {
+      console.error("Deal creation failed:", error);
+    }
   };
 
   // 4. Delete Action Mechanics
-  const handleDeleteTask = (id) => {
+  const handleDeleteTask = async (id) => {
+    // Optimistic UI removal
     setTasks(prev => prev.filter(t => t.id !== id));
+
+    try {
+      await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      console.error("Deal deletion failed:", error);
+      fetchDeals(); // Revert back if DB delete fails
+    }
+  };
+
+  // Helper function format currency
+  const formatValue = (val) => {
+    const num = Number(val);
+    return isNaN(num) ? '₹0' : `₹${num.toLocaleString('en-IN')}`;
   };
 
   return (
@@ -101,8 +140,8 @@ export default function TaskKanban() {
           >
             + Create New Deal
           </button>
-          <div className="text-[10px] font-mono bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl text-cyan-400 hidden md:block">
-            PERSISTENCE: LOCALSTORAGE_ACTIVE
+          <div className="text-[10px] font-mono bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl text-emerald-400 hidden md:block">
+            PERSISTENCE: POSTGRES_SYNCED
           </div>
         </div>
       </div>
@@ -111,10 +150,7 @@ export default function TaskKanban() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5 items-start">
         {COLUMNS.map(col => {
           const colTasks = tasks.filter(t => t.status === col.id);
-          const totalValue = colTasks.reduce((acc, curr) => {
-            const num = parseInt(curr.value.replace(/[^0-9]/g, ''), 10);
-            return acc + (isNaN(num) ? 0 : num);
-          }, 0);
+          const totalValue = colTasks.reduce((acc, curr) => acc + (Number(curr.value) || 0), 0);
 
           return (
             <div
@@ -136,7 +172,7 @@ export default function TaskKanban() {
               {/* Volume Track */}
               <div className="mb-4 text-[11px] font-mono text-slate-500 flex justify-between">
                 <span>Pipeline Volume:</span>
-                <span className="text-slate-300 font-medium">₹{totalValue.toLocaleString('en-IN')}</span>
+                <span className="text-slate-300 font-medium">{formatValue(totalValue)}</span>
               </div>
 
               {/* Cards Container */}
@@ -153,7 +189,7 @@ export default function TaskKanban() {
                         {task.company}
                       </span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-emerald-400">{task.value}</span>
+                        <span className="text-xs font-mono font-bold text-emerald-400">{formatValue(task.value)}</span>
                         <button 
                           onClick={() => handleDeleteTask(task.id)}
                           className="text-slate-600 hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100 text-[11px] cursor-pointer"

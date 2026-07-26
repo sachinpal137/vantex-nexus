@@ -1,6 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 export default function DashboardLayout({ children, currentView, onViewChange }) {
+  // 1. Dynamic Days Calculation Logic
+   
+  const SYSTEM_START_DATE = '2026-07-15'; 
+
+  const activeDays = useMemo(() => {
+    const startDate = new Date(SYSTEM_START_DATE);
+    const today = new Date();
+    const diffInTime = today.getTime() - startDate.getTime();
+    const diffInDays = Math.floor(diffInTime / (1000 * 3600 * 24));
+    return diffInDays > 0 ? diffInDays : 1;
+  }, []);
+
   // Common helper class to handle clean navigation active/inactive states without layout shifts
   const getNavClass = (viewName) => {
     const isMainActive = currentView === viewName;
@@ -64,7 +76,7 @@ export default function DashboardLayout({ children, currentView, onViewChange })
               <span>👥</span> Client Hub
             </div>
 
-            {/* Settings & Data Hub Tab (UNLOCKED FOR DAY 7 ENGINE) 👈 Added */}
+            {/* Settings & Data Hub Tab (UNLOCKED FOR DAY 7 ENGINE) */}
             <div 
               onClick={() => onViewChange('settings')}
               className={getNavClass('settings')}
@@ -91,8 +103,8 @@ export default function DashboardLayout({ children, currentView, onViewChange })
           <div className="text-sm font-medium text-slate-400">Operations Control Center</div>
           <div className="flex items-center gap-4">
             <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            {/* 👈 Updated to DAY 7 */}
-            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY 7)</span>
+            {/* 2. Updated to use dynamic activeDays */}
+            <span className="text-xs font-semibold text-slate-400 tracking-wider">SYSTEM ACTIVE (DAY {activeDays})</span>
           </div>
         </header>
 
