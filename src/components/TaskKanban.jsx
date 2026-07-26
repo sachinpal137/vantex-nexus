@@ -8,7 +8,7 @@ const COLUMNS = [
 ];
 
 export default function TaskKanban() {
-  // 1. Storage Engine Architecture (Now connected to Live Database)
+  // 1. Storage Engine Architecture (Connected to Live Database)
   const [tasks, setTasks] = useState([]);
   const [activeColumn, setActiveColumn] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,7 +19,7 @@ export default function TaskKanban() {
   const [newValue, setNewValue] = useState('');
   const [newOwner, setNewOwner] = useState('Sachin');
 
-  const API_URL = 'http://localhost:3000/deals';
+  const API_URL = 'https://vantex-nexus-backend.onrender.com/deals';
 
   // Fetch initial data on mount
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function TaskKanban() {
     const newDealData = {
       title: newTitle,
       company: newCompany,
-      value: newValue, // Sending raw number, DB handles it
+      value: newValue,
       owner: newOwner
     };
 
@@ -280,7 +280,7 @@ export default function TaskKanban() {
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-900 mt-6">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setIsModalOpen(value => !value)}
                   className="px-4 py-2 bg-slate-900 hover:bg-slate-850 text-slate-400 rounded-xl text-xs font-medium cursor-pointer"
                 >
                   Cancel

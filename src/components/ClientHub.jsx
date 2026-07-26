@@ -13,7 +13,7 @@ export default function ClientHub() {
   });
 
   useEffect(() => {
-    fetch('http://localhost:3000/clients')
+    fetch('https://vantex-nexus-backend.onrender.com/clients')
       .then((res) => {
         if (!res.ok) throw new Error("Network response was not ok");
         return res.json();
@@ -28,7 +28,7 @@ export default function ClientHub() {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:3000/clients', {
+      const response = await fetch('https://vantex-nexus-backend.onrender.com/clients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ export default function ClientHub() {
         </div>
         <button 
           onClick={() => setIsAdding(!isAdding)}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20"
+          className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20 cursor-pointer"
         >
           {isAdding ? 'Cancel' : '+ New Client'}
         </button>
@@ -105,20 +105,20 @@ export default function ClientHub() {
           </div>
           
           <input required type="text" placeholder="Client Name" 
-            className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none"
+            className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none text-xs"
             value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
             
           <input type="text" placeholder="Company Name" 
-            className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none"
+            className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none text-xs"
             value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})} />
             
           <input type="email" placeholder="Email Address" 
-            className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none"
+            className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none text-xs"
             value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
             
           <div className="flex gap-4">
             <select 
-              className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none flex-1"
+              className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none flex-1 text-xs"
               value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}
             >
               <option value="Lead">🟡 Lead</option>
@@ -127,12 +127,12 @@ export default function ClientHub() {
             </select>
             
             <input type="number" placeholder="Deal Value (₹)" 
-              className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none flex-1"
+              className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none flex-1 text-xs"
               value={formData.value} onChange={e => setFormData({...formData, value: e.target.value})} />
           </div>
 
           <div className="md:col-span-2 mt-2">
-            <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-lg transition-colors">
+            <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-lg transition-colors cursor-pointer text-xs">
               Save Client
             </button>
           </div>

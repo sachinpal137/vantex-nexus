@@ -10,9 +10,9 @@ export default function MetricsGrid() {
     isLoading: true
   });
 
-  // Component load hote hi naya dashboard API call karenge
+  // Component load hote hi live dashboard API call karenge
   useEffect(() => {
-    fetch('http://localhost:3000/dashboard-stats')
+    fetch('https://vantex-nexus-backend.onrender.com/dashboard-stats')
       .then(res => res.json())
       .then(data => {
         setDashboardData({
