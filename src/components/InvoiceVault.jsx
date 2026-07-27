@@ -25,7 +25,6 @@ export default function InvoiceVault() {
       try {
         const response = await fetch(`${API_BASE_URL}/invoices`);
         
-        // Ensure response is valid JSON and not a 404 HTML page
         const contentType = response.headers.get("content-type");
         if (!response.ok || !contentType || !contentType.includes("application/json")) {
           throw new Error(`Server returned status ${response.status} or non-JSON response`);
@@ -35,7 +34,7 @@ export default function InvoiceVault() {
         setInvoices(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Failed to fetch cloud invoices:", error);
-        setInvoices([]); // Fallback to empty array safely on error
+        setInvoices([]);
       } finally {
         setIsLoading(false);
       }
@@ -66,7 +65,6 @@ export default function InvoiceVault() {
     return { subtotal, taxAmount, total, safeItems };
   };
 
-  // Ensure invoices is an array for matrix stats
   const safeInvoicesArray = Array.isArray(invoices) ? invoices : [];
 
   const stats = safeInvoicesArray.reduce((acc, inv) => {
@@ -97,21 +95,24 @@ export default function InvoiceVault() {
     }));
   };
 
-  // 4. Cloud Form Submission
+  // 4. Cloud Form Submission (Updated with invoiceNumber & amount)
   const handleCreateInvoice = async (e) => {
     e.preventDefault();
     if (!clientName || !dueDate || lineItems.some(i => !i.desc || i.rate <= 0)) return;
 
     setIsSubmitting(true);
 
+    const { total } = calculateInvoiceMetrics(lineItems, taxRate);
+
     const newInvoice = {
-      id: `INV-2026-${String(safeInvoicesArray.length + 1).padStart(3, '0')}`,
+      invoiceNumber: `INV-2026-${String(safeInvoicesArray.length + 1).padStart(3, '0')}`,
       client: clientName,
       date: new Date().toISOString().split('T')[0],
       dueDate: dueDate,
       status: 'Pending',
       items: lineItems,
-      taxRate: Number(taxRate)
+      taxRate: Number(taxRate),
+      amount: total
     };
 
     try {
@@ -150,9 +151,9 @@ export default function InvoiceVault() {
     }, 50);
   };
 
-  // Safe Filtering with String coercion to prevent TypeError on toLowerCase
+  // Safe Filtering with invoiceNumber & client check
   const filteredInvoices = safeInvoicesArray.filter(inv => {
-    const safeId = String(inv.id || '');
+    const safeId = String(inv.invoiceNumber || '');
     const safeClient = String(inv.client || '');
     const matchesSearch = safeClient.toLowerCase().includes(searchQuery.toLowerCase()) || safeId.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || inv.status === statusFilter;
@@ -270,7 +271,7 @@ export default function InvoiceVault() {
                   const { total } = calculateInvoiceMetrics(inv.items, inv.taxRate);
                   return (
                     <tr key={inv.id} className="hover:bg-slate-900/20 transition-colors">
-                      <td className="p-4 font-mono text-indigo-400 font-semibold">{inv.id}</td>
+                      <td className="p-4 font-mono text-indigo-400 font-semibold">{inv.invoiceNumber}</td>
                       <td className="p-4 font-medium text-slate-200">{inv.client}</td>
                       <td className="p-4 text-slate-400 font-mono">{inv.date}</td>
                       <td className="p-4 text-slate-200 font-mono font-bold">₹{total.toLocaleString('en-IN')}</td>
@@ -456,7 +457,7 @@ export default function InvoiceVault() {
                 <p className="text-[10px] font-mono text-slate-500 mt-0.5">Automated Cloud Node Infrastructure Statement</p>
               </div>
               <div className="text-right font-mono">
-                <div className="text-sm font-bold text-indigo-400">{viewingInvoice.id}</div>
+                <div className="text-sm font-bold text-indigo-400">{viewingInvoice.invoiceNumber}</div>
                 <div className="text-[10px] text-slate-500 mt-1">Issued: {viewingInvoice.date}</div>
                 <div className="text-[10px] text-slate-400 font-bold">Due: {viewingInvoice.dueDate}</div>
               </div>
