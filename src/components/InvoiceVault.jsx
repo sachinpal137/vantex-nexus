@@ -1,40 +1,18 @@
 import React, { useState, useEffect } from 'react';
 
-const DEFAULT_INVOICES = [
-  {
-    id: 'INV-2026-001',
-    client: 'GGITS Portal Authorities',
-    date: '2026-04-10',
-    dueDate: '2026-05-10',
-    status: 'Paid',
-    items: [{ id: '1', desc: 'Dashboard UI Architecture Layout', qty: 1, rate: 95000 }],
-    taxRate: 18,
-  },
-  {
-    id: 'INV-2026-002',
-    client: 'Katni Traders Group',
-    date: '2026-04-12',
-    dueDate: '2026-05-12',
-    status: 'Pending',
-    items: [
-      { id: '1', desc: 'Next.js Core Pipeline Setup', qty: 1, rate: 150000 },
-      { id: '2', desc: 'Database Schema Optimization', qty: 1, rate: 60000 }
-    ],
-    taxRate: 18,
-  }
-];
+// Live Backend URL
+const API_BASE_URL = 'https://vantex-nexus-backend.onrender.com';
 
 export default function InvoiceVault() {
-  // 1. Storage & State Synchronization
-  const [invoices, setInvoices] = useState(() => {
-    const saved = localStorage.getItem('vantex_nexus_invoices');
-    return saved ? JSON.parse(saved) : DEFAULT_INVOICES;
-  });
+  // 1. Cloud Storage & State Synchronization
+  const [invoices, setInvoices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [viewingInvoice, setViewingInvoice] = useState(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form States for New Invoice
   const [clientName, setClientName] = useState('');
@@ -42,16 +20,33 @@ export default function InvoiceVault() {
   const [taxRate, setTaxRate] = useState(18);
   const [lineItems, setLineItems] = useState([{ id: '1', desc: '', qty: 1, rate: 0 }]);
 
+  // Fetch Invoices from Live Database on Mount
   useEffect(() => {
-    localStorage.setItem('vantex_nexus_invoices', JSON.stringify(invoices));
-  }, [invoices]);
+    const fetchInvoices = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/invoices`);
+        if (response.ok) {
+          const data = await response.json();
+          // Sort by date or ID descending if needed, assuming API returns array
+          setInvoices(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch cloud invoices:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchInvoices();
+  }, []);
 
   // 2. Dynamic Mathematical Computations
   const calculateInvoiceMetrics = (items, taxPercent) => {
-    const subtotal = items.reduce((acc, item) => acc + (item.qty * item.rate), 0);
+    // Safety check in case API returns items in a different format initially
+    const safeItems = Array.isArray(items) ? items : typeof items === 'string' ? JSON.parse(items) : [];
+    const subtotal = safeItems.reduce((acc, item) => acc + (item.qty * item.rate), 0);
     const taxAmount = Math.round(subtotal * (taxPercent / 100));
     const total = subtotal + taxAmount;
-    return { subtotal, taxAmount, total };
+    return { subtotal, taxAmount, total, safeItems };
   };
 
   // Global Matrix Stats
@@ -83,10 +78,12 @@ export default function InvoiceVault() {
     }));
   };
 
-  // 4. Form Submission & Custom ID Tokenization
-  const handleCreateInvoice = (e) => {
+  // 4. Cloud Form Submission & Custom ID Tokenization
+  const handleCreateInvoice = async (e) => {
     e.preventDefault();
     if (!clientName || !dueDate || lineItems.some(i => !i.desc || i.rate <= 0)) return;
+
+    setIsSubmitting(true);
 
     const newInvoice = {
       id: `INV-2026-${String(invoices.length + 1).padStart(3, '0')}`,
@@ -98,13 +95,33 @@ export default function InvoiceVault() {
       taxRate: Number(taxRate)
     };
 
-    setInvoices([newInvoice, ...invoices]);
-    
-    // Reset States
-    setClientName('');
-    setDueDate('');
-    setLineItems([{ id: '1', desc: '', qty: 1, rate: 0 }]);
-    setIsCreateMode(false);
+    try {
+      const response = await fetch(`${API_BASE_URL}/invoices`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newInvoice),
+      });
+
+      if (response.ok) {
+        const savedInvoice = await response.json();
+        setInvoices([savedInvoice, ...invoices]);
+        
+        // Reset States
+        setClientName('');
+        setDueDate('');
+        setLineItems([{ id: '1', desc: '', qty: 1, rate: 0 }]);
+        setIsCreateMode(false);
+      } else {
+        alert("❌ Failed to save invoice to cloud database.");
+      }
+    } catch (error) {
+      console.error("Cloud Error:", error);
+      alert("❌ Network error while saving invoice.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Native Print Execution Trigger
@@ -116,66 +133,34 @@ export default function InvoiceVault() {
   };
 
   const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = inv.client.toLowerCase().includes(searchQuery.toLowerCase()) || inv.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = inv.client?.toLowerCase().includes(searchQuery.toLowerCase()) || inv.id?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || inv.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   return (
-    <div className="text-slate-100 bg-slate-950/20 min-h-screen pb-12">
+    <div className="text-slate-100 bg-slate-950/20 min-h-screen pb-12 animate-in fade-in duration-500">
       
       {/* NATIVE HIGH-FIDELITY PRINT ENGINE OVERRIDE PATCH */}
       <style>{`
         @media print {
-          /* 1. Nuke outer app shell nodes completely to secure 0px allocation */
-          aside, header, .no-print {
-            display: none !important;
-          }
-
-          /* 2. Flatten layout nodes completely to remove background artifacts and height locks */
-          html, body, main, #root, 
-          .min-h-screen, 
-          .flex-1 {
-            height: auto !important;
-            min-height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-            background: #ffffff !important;
+          aside, header, .no-print { display: none !important; }
+          html, body, main, #root, .min-h-screen, .flex-1 {
+            height: auto !important; min-height: 0 !important; margin: 0 !important;
+            padding: 0 !important; overflow: visible !important; background: #ffffff !important;
             box-shadow: none !important;
           }
-
-          /* 3. Re-draw isolated content area starting precisely at page origin */
           #printable-invoice-area {
-            display: block !important;
-            position: static !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            background: #ffffff !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 12mm !important;
-            margin: 0 !important;
+            display: block !important; position: static !important; width: 100% !important;
+            max-width: 100% !important; background: #ffffff !important; border: none !important;
+            box-shadow: none !important; padding: 12mm !important; margin: 0 !important;
           }
-
-          /* 4. Strict high-contrast monochrome typography rules */
-          #printable-invoice-area * {
-            color: #000000 !important;
-            background: transparent !important;
-          }
-          
+          #printable-invoice-area * { color: #000000 !important; background: transparent !important; }
           #printable-invoice-area .text-indigo-400,
-          #printable-invoice-area .text-emerald-400 {
-            color: #000000 !important;
-            font-weight: 800 !important;
-          }
-
-          /* 5. Elegant structural table dividers instead of dark grid boundaries */
+          #printable-invoice-area .text-emerald-400 { color: #000000 !important; font-weight: 800 !important; }
           #printable-invoice-area .border-slate-900, 
           #printable-invoice-area .divide-slate-900, 
-          #printable-invoice-area .divide-slate-900\/40 {
-            border-color: #cbd5e1 !important;
-          }
+          #printable-invoice-area .divide-slate-900\\/40 { border-color: #cbd5e1 !important; }
         }
       `}</style>
 
@@ -183,11 +168,11 @@ export default function InvoiceVault() {
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8 no-print">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-100">Invoice Vault Engine</h1>
-          <p className="text-sm text-slate-400 mt-1">Handcrafted multi-tenant billing engine. Zero layout abstraction wrappers.</p>
+          <p className="text-sm text-slate-400 mt-1">Live cloud multi-tenant billing engine. Zero layout abstraction wrappers.</p>
         </div>
         <button
           onClick={() => { setIsCreateMode(!isCreateMode); setViewingInvoice(null); }}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold tracking-wide transition-all cursor-pointer"
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold tracking-wide transition-all cursor-pointer shadow-lg shadow-indigo-600/20"
         >
           {isCreateMode ? '← Back to Ledger' : '+ Generate Invoice Block'}
         </button>
@@ -197,22 +182,28 @@ export default function InvoiceVault() {
         <div className="space-y-6 no-print">
           {/* Top Performance Financial Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-5">
+            <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 backdrop-blur-sm shadow-xl">
               <span className="text-[10px] font-mono tracking-wider text-slate-500 uppercase">Total Vault Volume</span>
-              <div className="text-xl font-bold font-mono mt-1 text-slate-200">₹{stats.totalVolume.toLocaleString('en-IN')}</div>
+              <div className="text-xl font-bold font-mono mt-1 text-slate-200">
+                {isLoading ? '...' : `₹${stats.totalVolume.toLocaleString('en-IN')}`}
+              </div>
             </div>
-            <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 border-l-4 border-l-emerald-500">
+            <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 border-l-4 border-l-emerald-500 backdrop-blur-sm shadow-xl">
               <span className="text-[10px] font-mono tracking-wider text-emerald-500 uppercase">Liquid Cleared (Paid)</span>
-              <div className="text-xl font-bold font-mono mt-1 text-emerald-400">₹{stats.paid.toLocaleString('en-IN')}</div>
+              <div className="text-xl font-bold font-mono mt-1 text-emerald-400">
+                {isLoading ? '...' : `₹${stats.paid.toLocaleString('en-IN')}`}
+              </div>
             </div>
-            <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 border-l-4 border-l-amber-500">
+            <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 border-l-4 border-l-amber-500 backdrop-blur-sm shadow-xl">
               <span className="text-[10px] font-mono tracking-wider text-amber-500 uppercase">Escrow Pipeline (Pending)</span>
-              <div className="text-xl font-bold font-mono mt-1 text-amber-400">₹{stats.pending.toLocaleString('en-IN')}</div>
+              <div className="text-xl font-bold font-mono mt-1 text-amber-400">
+                {isLoading ? '...' : `₹${stats.pending.toLocaleString('en-IN')}`}
+              </div>
             </div>
           </div>
 
           {/* Filtering Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-[#0d1321] border border-slate-900 p-4 rounded-xl">
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-[#0d1321]/80 backdrop-blur-sm border border-slate-900 p-4 rounded-xl shadow-xl">
             <input
               type="text"
               placeholder="Search by Invoice ID or Client..."
@@ -235,7 +226,7 @@ export default function InvoiceVault() {
           </div>
 
           {/* Core Table Matrix */}
-          <div className="bg-[#0d1321]/40 border border-slate-900 rounded-xl overflow-hidden">
+          <div className="bg-[#0d1321]/40 border border-slate-900 rounded-xl overflow-hidden backdrop-blur-sm shadow-xl">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-900 bg-slate-900/30 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
@@ -248,7 +239,13 @@ export default function InvoiceVault() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900 text-xs">
-                {filteredInvoices.map(inv => {
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="6" className="p-8 text-center text-slate-500 font-mono animate-pulse">
+                      Fetching live blocks from cloud infrastructure...
+                    </td>
+                  </tr>
+                ) : filteredInvoices.map(inv => {
                   const { total } = calculateInvoiceMetrics(inv.items, inv.taxRate);
                   return (
                     <tr key={inv.id} className="hover:bg-slate-900/20 transition-colors">
@@ -279,10 +276,10 @@ export default function InvoiceVault() {
                     </tr>
                   );
                 })}
-                {filteredInvoices.length === 0 && (
+                {!isLoading && filteredInvoices.length === 0 && (
                   <tr>
                     <td colSpan="6" className="p-8 text-center text-slate-600 font-mono">
-                      No matching records found in local index blocks.
+                      No matching records found in cloud index blocks.
                     </td>
                   </tr>
                 )}
@@ -294,10 +291,10 @@ export default function InvoiceVault() {
 
       {/* Dynamic Creation Workspace Mode */}
       {isCreateMode && (
-        <form onSubmit={handleCreateInvoice} className="bg-[#0d1321] border border-slate-900 rounded-2xl p-6 max-w-3xl mx-auto space-y-6 no-print">
+        <form onSubmit={handleCreateInvoice} className="bg-[#0d1321] border border-slate-900 rounded-2xl p-6 max-w-3xl mx-auto space-y-6 no-print shadow-2xl backdrop-blur-sm">
           <div className="border-b border-slate-900 pb-4">
             <h3 className="text-base font-bold text-white">Handcraft Corporate Invoice Block</h3>
-            <p className="text-xs text-slate-500">Append raw commercial billing matrices directly into internal memory arrays.</p>
+            <p className="text-xs text-slate-500">Append raw commercial billing matrices directly into live cloud arrays.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -305,7 +302,7 @@ export default function InvoiceVault() {
               <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1">Client Business Title</label>
               <input
                 type="text" required value={clientName} onChange={e => setClientName(e.target.value)}
-                placeholder="e.g., GGITS Operations Inc."
+                placeholder="e.g., Vantex Ops Inc."
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
               />
             </div>
@@ -313,7 +310,7 @@ export default function InvoiceVault() {
               <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1">Due Matrix Date</label>
               <input
                 type="date" required value={dueDate} onChange={e => setDueDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono [color-scheme:dark]"
               />
             </div>
           </div>
@@ -331,7 +328,7 @@ export default function InvoiceVault() {
             </div>
 
             <div className="space-y-2">
-              {lineItems.map((item, index) => (
+              {lineItems.map((item) => (
                 <div key={item.id} className="grid grid-cols-12 gap-3 items-center bg-slate-950/40 p-3 rounded-xl border border-slate-900">
                   <div className="col-span-6">
                     <input
@@ -371,7 +368,7 @@ export default function InvoiceVault() {
           {/* Mathematical Preview Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-900">
             <div>
-              <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1">Tax Matrix Configuration (%)</label>
+              <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1">Tax Matrix Config (%)</label>
               <input
                 type="number" min="0" max="100" value={taxRate} onChange={e => setTaxRate(e.target.value)}
                 className="w-32 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500"
@@ -403,9 +400,10 @@ export default function InvoiceVault() {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold tracking-wide cursor-pointer"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold tracking-wide cursor-pointer disabled:opacity-50"
             >
-              Commit Invoice Node
+              {isSubmitting ? 'Pushing to Cloud...' : 'Commit Invoice Node'}
             </button>
           </div>
         </form>
@@ -423,7 +421,7 @@ export default function InvoiceVault() {
             </button>
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold cursor-pointer"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-indigo-600/20"
             >
               🖨️ Fire Browser Print Layer
             </button>
@@ -434,7 +432,7 @@ export default function InvoiceVault() {
             <div className="flex justify-between items-start border-b border-slate-900 pb-6">
               <div>
                 <h2 className="text-lg font-bold text-white tracking-wide">VANTEX SOLUTIONS</h2>
-                <p className="text-[10px] font-mono text-slate-500 mt-0.5">Automated Node Infrastructure Statement</p>
+                <p className="text-[10px] font-mono text-slate-500 mt-0.5">Automated Cloud Node Infrastructure Statement</p>
               </div>
               <div className="text-right font-mono">
                 <div className="text-sm font-bold text-indigo-400">{viewingInvoice.id}</div>
@@ -459,14 +457,17 @@ export default function InvoiceVault() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900/40 text-xs text-slate-300">
-                {viewingInvoice.items.map(item => (
-                  <tr key={item.id}>
-                    <td className="py-3 font-medium text-slate-200">{item.desc}</td>
-                    <td className="py-3 text-center font-mono">{item.qty}</td>
-                    <td className="py-3 text-right font-mono">₹{item.rate.toLocaleString('en-IN')}</td>
-                    <td className="py-3 text-right font-mono text-slate-100">₹{(item.qty * item.rate).toLocaleString('en-IN')}</td>
-                  </tr>
-                ))}
+                {(() => {
+                  const { safeItems } = calculateInvoiceMetrics(viewingInvoice.items, viewingInvoice.taxRate);
+                  return safeItems.map((item, i) => (
+                    <tr key={item.id || i}>
+                      <td className="py-3 font-medium text-slate-200">{item.desc}</td>
+                      <td className="py-3 text-center font-mono">{item.qty}</td>
+                      <td className="py-3 text-right font-mono">₹{item.rate.toLocaleString('en-IN')}</td>
+                      <td className="py-3 text-right font-mono text-slate-100">₹{(item.qty * item.rate).toLocaleString('en-IN')}</td>
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
 
@@ -489,7 +490,7 @@ export default function InvoiceVault() {
             </div>
 
             <div className="mt-12 pt-6 border-t border-slate-900/60 text-[10px] font-mono text-slate-600 text-center">
-              System-generated via Vantex Nexus Architecture. No physical authentication signature required.
+              System-generated via Vantex Nexus Cloud Architecture. No physical authentication signature required.
             </div>
           </div>
         </div>
