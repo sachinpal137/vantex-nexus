@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 const API_BASE_URL = 'https://vantex-nexus-backend.onrender.com';
 
 export default function InvoiceVault() {
-  // 1. Cloud Storage & State Synchronization
   const [invoices, setInvoices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,18 +19,21 @@ export default function InvoiceVault() {
   const [taxRate, setTaxRate] = useState(18);
   const [lineItems, setLineItems] = useState([{ id: '1', desc: '', qty: 1, rate: 0 }]);
 
-  // Fetch Invoices from Live Database on Mount
+  // 1. Fetch Invoices with SAFE ARRAY CHECK
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/invoices`);
         if (response.ok) {
           const data = await response.json();
-          // Sort by date or ID descending if needed, assuming API returns array
-          setInvoices(data);
+          // SAFETY CHECK: Ensure data is an array before setting it
+          setInvoices(Array.isArray(data) ? data : []);
+        } else {
+          setInvoices([]);
         }
       } catch (error) {
         console.error("Failed to fetch cloud invoices:", error);
+        setInvoices([]); // Fallback to empty array on error
       } finally {
         setIsLoading(false);
       }
@@ -39,18 +41,33 @@ export default function InvoiceVault() {
     fetchInvoices();
   }, []);
 
-  // 2. Dynamic Mathematical Computations
+  // 2. Dynamic Mathematical Computations (WITH SAFE JSON PARSING)
   const calculateInvoiceMetrics = (items, taxPercent) => {
-    // Safety check in case API returns items in a different format initially
-    const safeItems = Array.isArray(items) ? items : typeof items === 'string' ? JSON.parse(items) : [];
-    const subtotal = safeItems.reduce((acc, item) => acc + (item.qty * item.rate), 0);
-    const taxAmount = Math.round(subtotal * (taxPercent / 100));
+    let safeItems = [];
+    
+    if (Array.isArray(items)) {
+      safeItems = items;
+    } else if (typeof items === 'string') {
+      try {
+        safeItems = JSON.parse(items);
+      } catch (error) {
+        console.error("Failed to parse invoice items:", error);
+        safeItems = [];
+      }
+    }
+
+    const subtotal = safeItems.reduce((acc, item) => acc + ((item.qty || 0) * (item.rate || 0)), 0);
+    const validTaxPercent = Number(taxPercent) || 0;
+    const taxAmount = Math.round(subtotal * (validTaxPercent / 100));
     const total = subtotal + taxAmount;
+    
     return { subtotal, taxAmount, total, safeItems };
   };
 
-  // Global Matrix Stats
-  const stats = invoices.reduce((acc, inv) => {
+  // Ensure invoices is an array for matrix stats
+  const safeInvoicesArray = Array.isArray(invoices) ? invoices : [];
+
+  const stats = safeInvoicesArray.reduce((acc, inv) => {
     const { total } = calculateInvoiceMetrics(inv.items, inv.taxRate);
     if (inv.status === 'Paid') acc.paid += total;
     else if (inv.status === 'Pending') acc.pending += total;
@@ -78,7 +95,7 @@ export default function InvoiceVault() {
     }));
   };
 
-  // 4. Cloud Form Submission & Custom ID Tokenization
+  // 4. Cloud Form Submission
   const handleCreateInvoice = async (e) => {
     e.preventDefault();
     if (!clientName || !dueDate || lineItems.some(i => !i.desc || i.rate <= 0)) return;
@@ -86,7 +103,7 @@ export default function InvoiceVault() {
     setIsSubmitting(true);
 
     const newInvoice = {
-      id: `INV-2026-${String(invoices.length + 1).padStart(3, '0')}`,
+      id: `INV-2026-${String(safeInvoicesArray.length + 1).padStart(3, '0')}`,
       client: clientName,
       date: new Date().toISOString().split('T')[0],
       dueDate: dueDate,
@@ -106,7 +123,7 @@ export default function InvoiceVault() {
 
       if (response.ok) {
         const savedInvoice = await response.json();
-        setInvoices([savedInvoice, ...invoices]);
+        setInvoices([savedInvoice, ...safeInvoicesArray]);
         
         // Reset States
         setClientName('');
@@ -124,7 +141,6 @@ export default function InvoiceVault() {
     }
   };
 
-  // Native Print Execution Trigger
   const triggerNativePrint = (inv) => {
     setViewingInvoice(inv);
     setTimeout(() => {
@@ -132,7 +148,8 @@ export default function InvoiceVault() {
     }, 50);
   };
 
-  const filteredInvoices = invoices.filter(inv => {
+  // Safe Filtering
+  const filteredInvoices = safeInvoicesArray.filter(inv => {
     const matchesSearch = inv.client?.toLowerCase().includes(searchQuery.toLowerCase()) || inv.id?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || inv.status === statusFilter;
     return matchesSearch && matchesStatus;
