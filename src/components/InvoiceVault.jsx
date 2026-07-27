@@ -19,21 +19,23 @@ export default function InvoiceVault() {
   const [taxRate, setTaxRate] = useState(18);
   const [lineItems, setLineItems] = useState([{ id: '1', desc: '', qty: 1, rate: 0 }]);
 
-  // 1. Fetch Invoices with SAFE ARRAY CHECK
+  // 1. Fetch Invoices with Content-Type & HTML Error Shield
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/invoices`);
-        if (response.ok) {
-          const data = await response.json();
-          // SAFETY CHECK: Ensure data is an array before setting it
-          setInvoices(Array.isArray(data) ? data : []);
-        } else {
-          setInvoices([]);
+        
+        // Ensure response is valid JSON and not a 404 HTML page
+        const contentType = response.headers.get("content-type");
+        if (!response.ok || !contentType || !contentType.includes("application/json")) {
+          throw new Error(`Server returned status ${response.status} or non-JSON response`);
         }
+
+        const data = await response.json();
+        setInvoices(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Failed to fetch cloud invoices:", error);
-        setInvoices([]); // Fallback to empty array on error
+        setInvoices([]); // Fallback to empty array safely on error
       } finally {
         setIsLoading(false);
       }
@@ -148,9 +150,11 @@ export default function InvoiceVault() {
     }, 50);
   };
 
-  // Safe Filtering
+  // Safe Filtering with String coercion to prevent TypeError on toLowerCase
   const filteredInvoices = safeInvoicesArray.filter(inv => {
-    const matchesSearch = inv.client?.toLowerCase().includes(searchQuery.toLowerCase()) || inv.id?.toLowerCase().includes(searchQuery.toLowerCase());
+    const safeId = String(inv.id || '');
+    const safeClient = String(inv.client || '');
+    const matchesSearch = safeClient.toLowerCase().includes(searchQuery.toLowerCase()) || safeId.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || inv.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
