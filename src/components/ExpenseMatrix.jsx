@@ -1,30 +1,36 @@
 import React, { useState, useMemo, useEffect } from 'react';
 
-export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
-  // 1. Core States for Expenses with localStorage Sync
-  const [expenses, setExpenses] = useState(() => {
-    try {
-      const saved = localStorage.getItem('vantex_expenses');
-      return saved ? JSON.parse(saved) : [
-        { id: 1, title: 'Vercel Pro Plan', amount: 2000, category: 'Infrastructure', date: '2026-04-01' },
-        { id: 2, title: 'UI Designer Freelancer', amount: 25000, category: 'Outsourcing', date: '2026-04-05' },
-        { id: 3, title: 'LinkedIn Premium/Ads', amount: 8000, category: 'Marketing', date: '2026-04-10' },
-        { id: 4, title: 'Cursor AI API', amount: 1500, category: 'Tools', date: '2026-04-12' },
-      ];
-    } catch (e) {
-      console.error("Error reading localStorage", e);
-      return [];
-    }
-  });
+// Live Backend URL
+const API_BASE_URL = 'https://vantex-nexus-backend.onrender.com';
 
+export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
+  // 1. Core States for Expenses (Moved to Cloud State)
+  const [expenses, setExpenses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ title: '', amount: '', category: 'Infrastructure', date: '' });
 
-  // Automatically commit mutations to browser memory
+  // 2. Fetch Expenses from Live Database
   useEffect(() => {
-    localStorage.setItem('vantex_expenses', JSON.stringify(expenses));
-  }, [expenses]);
+    const fetchExpenses = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/expenses`);
+        if (response.ok) {
+          const data = await response.json();
+          setExpenses(Array.isArray(data) ? data : []);
+        } else {
+          console.error("Failed to fetch cloud expenses");
+        }
+      } catch (error) {
+        console.error("Network error while fetching expenses:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchExpenses();
+  }, []);
 
-  // 2. Mathematical Aggregations
+  // 3. Mathematical Aggregations
   const totalExpenses = useMemo(() => {
     return expenses.reduce((sum, item) => sum + Number(item.amount), 0);
   }, [expenses]);
@@ -32,7 +38,7 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
   const netProfit = totalInvoiceRevenue - totalExpenses;
   const profitMargin = totalInvoiceRevenue > 0 ? ((netProfit / totalInvoiceRevenue) * 100).toFixed(1) : 0;
 
-  // 3. Category Data Preparation for SVG Chart
+  // 4. Category Data Preparation for SVG Chart
   const categoryTotals = useMemo(() => {
     const map = {};
     expenses.forEach(e => {
@@ -46,16 +52,43 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
     return values.length > 0 ? Math.max(...values, 5000) : 5000; 
   }, [categoryTotals]);
 
-  // Handle Form Submission
-  const handleAddExpense = (e) => {
+  // 5. Handle Form Submission to Cloud
+  const handleAddExpense = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.amount || !formData.date) return;
+    if (!formData.title || !formData.amount) return;
     
-    setExpenses(prev => [
-      ...prev,
-      { ...formData, id: Date.now(), amount: Number(formData.amount) }
-    ]);
-    setFormData({ title: '', amount: '', category: 'Infrastructure', date: '' });
+    setIsSubmitting(true);
+
+    const newExpensePayload = {
+      title: formData.title,
+      amount: Number(formData.amount),
+      category: formData.category,
+      // Date backend database by default 'now()' le raha hai tere prisma schema ke hisaab se
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/expenses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN || import.meta.env.VITE_ADMIN_SECRET_KEY
+        },
+        body: JSON.stringify(newExpensePayload),
+      });
+
+      if (response.ok) {
+        const savedExpense = await response.json();
+        setExpenses(prev => [...prev, savedExpense]);
+        setFormData({ title: '', amount: '', category: 'Infrastructure', date: '' });
+      } else {
+        alert("❌ Failed to push expense to cloud ledger.");
+      }
+    } catch (error) {
+      console.error("Cloud Submission Error:", error);
+      alert("❌ Network error while saving expense.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // SVG Chart Dimensions
@@ -68,7 +101,7 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
       {/* Header & High-Level Metrics */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Vantex Nexus // Financial Matrix</h1>
-        <p className="text-sm text-slate-400">Zero-dependency real-time cash flow & operational expense engine.</p>
+        <p className="text-sm text-slate-400">Live cloud-synced cash flow & operational expense engine.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -78,12 +111,14 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
         </div>
         <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl">
           <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Operational Burn (Outflow)</p>
-          <p className="text-3xl font-bold text-rose-400 mt-2">₹{totalExpenses.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-rose-400 mt-2">
+            {isLoading ? '...' : `₹${totalExpenses.toLocaleString()}`}
+          </p>
         </div>
         <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl">
           <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Net Profit / Margin</p>
           <p className="text-3xl font-bold text-blue-400 mt-2">
-            ₹{netProfit.toLocaleString()} <span className="text-sm font-normal text-slate-400">({profitMargin}%)</span>
+            {isLoading ? '...' : `₹${netProfit.toLocaleString()}`} <span className="text-sm font-normal text-slate-400">({profitMargin}%)</span>
           </p>
         </div>
       </div>
@@ -97,6 +132,7 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
             <form onSubmit={handleAddExpense} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input 
                 type="text" 
+                required
                 placeholder="Expense Description (e.g., Server Scaling)" 
                 value={formData.title}
                 onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
@@ -104,6 +140,7 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
               />
               <input 
                 type="number" 
+                required
                 placeholder="Amount (INR)" 
                 value={formData.amount}
                 onChange={e => setFormData(prev => ({ ...prev, amount: e.target.value }))}
@@ -118,15 +155,20 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
                 <option value="Outsourcing">Outsourcing</option>
                 <option value="Marketing">Marketing</option>
                 <option value="Tools">Tools</option>
+                <option value="Office">Office</option>
               </select>
               <input 
                 type="date" 
                 value={formData.date}
                 onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 [color-scheme:dark]"
               />
-              <button type="submit" className="md:col-span-2 bg-blue-600 hover:bg-blue-500 transition-colors text-white font-medium py-2 rounded-lg text-sm">
-                Commit Entry to Ledger
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="md:col-span-2 bg-blue-600 hover:bg-blue-500 transition-colors text-white font-medium py-2 rounded-lg text-sm disabled:opacity-50"
+              >
+                {isSubmitting ? 'Pushing to Cloud...' : 'Commit Entry to Live Ledger'}
               </button>
             </form>
           </div>
@@ -142,23 +184,42 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
                   <tr className="bg-slate-900/50 text-slate-400 border-b border-slate-700">
                     <th className="p-4 font-medium">Description</th>
                     <th className="p-4 font-medium">Category</th>
-                    <th className="p-4 font-medium">Date</th>
+                    <th className="p-4 font-medium">Recorded Date</th>
                     <th className="p-4 font-medium text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
-                  {expenses.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-700/20 transition-colors">
-                      <td className="p-4 font-medium text-white">{item.title}</td>
-                      <td className="p-4">
-                        <span className="px-2 py-0.5 rounded text-xs bg-slate-900 text-slate-300 border border-slate-700">
-                          {item.category}
-                        </span>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan="4" className="p-8 text-center text-slate-500 animate-pulse">
+                        Syncing live blocks from database...
                       </td>
-                      <td className="p-4 text-slate-400">{item.date}</td>
-                      <td className="p-4 text-right font-semibold text-rose-400">₹{item.amount.toLocaleString()}</td>
                     </tr>
-                  ))}
+                  ) : expenses.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="p-8 text-center text-slate-500">
+                        No expenses logged in cloud infrastructure yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    expenses.map(item => {
+                      // Formatting date coming from Supabase/Prisma
+                      const displayDate = item.expenseDate ? item.expenseDate.split('T')[0] : (item.createdAt ? item.createdAt.split('T')[0] : item.date);
+                      
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-700/20 transition-colors">
+                          <td className="p-4 font-medium text-white">{item.title}</td>
+                          <td className="p-4">
+                            <span className="px-2 py-0.5 rounded text-xs bg-slate-900 text-slate-300 border border-slate-700">
+                              {item.category}
+                            </span>
+                          </td>
+                          <td className="p-4 text-slate-400 font-mono text-xs">{displayDate}</td>
+                          <td className="p-4 text-right font-semibold text-rose-400">₹{Number(item.amount).toLocaleString()}</td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -171,8 +232,8 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
             <h2 className="text-lg font-semibold text-white mb-2">Category Breakdown</h2>
             <p className="text-xs text-slate-400 mb-6">Native high-fidelity SVG geometry rendering pipeline.</p>
             
-            {categoryTotals.length === 0 ? (
-              <div className="h-40 flex items-center justify-center text-sm text-slate-500">No data points to render</div>
+            {categoryTotals.length === 0 && !isLoading ? (
+              <div className="h-40 flex items-center justify-center text-sm text-slate-500">Awaiting financial data...</div>
             ) : (
               <div className="w-full flex justify-center bg-slate-900/40 p-4 rounded-lg border border-slate-700/50">
                 {/* SVG Mathematical Bar Chart */}
@@ -195,7 +256,7 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
                           textAnchor="middle"
                           className="text-[10px] fill-blue-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                         >
-                          ₹{item.value}
+                          ₹{item.value.toLocaleString()}
                         </text>
 
                         {/* Rendered Bar Geometry */}
@@ -203,7 +264,7 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
                           x={xCoordinate}
                           y={yCoordinate}
                           width={barWidth}
-                          height={currentBarHeight}
+                          height={currentBarHeight || 2} // Fallback height minimum
                           rx={6}
                           className="fill-blue-500/80 group-hover:fill-blue-400 transition-all duration-300 cursor-pointer"
                         />

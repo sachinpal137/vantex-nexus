@@ -120,6 +120,8 @@ export default function InvoiceVault() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // 👇 YAHAN PAR CHANGE KIYA HAI (ADMIN SECRET HEADER ADDED) 👇
+          'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET_KEY || 'TERA_ACTUAL_SECRET_KEY'
         },
         body: JSON.stringify(newInvoice),
       });
