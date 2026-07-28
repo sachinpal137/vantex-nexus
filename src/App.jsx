@@ -1,35 +1,49 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from './layouts/DashboardLayout';
 import MetricsGrid from './components/MetricsGrid';
 import AnalyticsChart from './components/AnalyticsChart';
-import TaskKanban from './components/TaskKanban'; // Day 3 Pipeline Engine
-import InvoiceVault from './components/InvoiceVault'; // Day 4 Billing Engine
-import ExpenseMatrix from './components/ExpenseMatrix'; // Day 5 Financial Engine Added
-import ClientHub from './components/ClientHub'; // Day 6 CRM Engine Added
-import SettingsHub from './components/SettingsHub'; // 👈 Day 7 Data Management Added
+import TaskKanban from './components/TaskKanban'; 
+import InvoiceVault from './components/InvoiceVault'; 
+import ExpenseMatrix from './components/ExpenseMatrix'; 
+import ClientHub from './components/ClientHub'; 
+import SettingsHub from './components/SettingsHub'; 
+
+const API_BASE_URL = 'https://vantex-nexus-backend.onrender.com';
 
 export default function App() {
   // Global view state to manage workspace toggling
-  // Supported States: 'dashboard' | 'kanban' | 'invoices' | 'expenses' | 'clients' | 'settings'
   const [currentView, setCurrentView] = useState('dashboard');
+  
+  // Live Revenue State
+  const [totalPaidRevenue, setTotalPaidRevenue] = useState(75000); // Default fallback
 
-  // 🔄 Day 4 & Day 5 Data Bridge: Live Revenue calculation from localStorage
-  const totalPaidRevenue = useMemo(() => {
-    try {
-      // Day 4 me jis key se invoices save kiye the (e.g., 'vantex_invoices' ya 'invoices') use fetch karo
-      const savedInvoices = localStorage.getItem('vantex_invoices') || localStorage.getItem('invoices');
-      if (!savedInvoices) return 75000; // Fallback dummy data agar koi invoice na mile
+  // Fetch live invoices from Cloud DB when user switches to 'expenses' view
+  useEffect(() => {
+    if (currentView === 'expenses' || currentView === 'dashboard') {
+      const fetchLiveRevenue = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/invoices`);
+          if (response.ok) {
+            const invoicesList = await response.json();
+            
+            // Filter only 'Paid' status and sum amounts
+            const calculatedTotal = invoicesList
+              .filter(inv => inv.status === 'Paid' || inv.status === 'paid')
+              .reduce((sum, inv) => sum + Number(inv.amount), 0);
+              
+            // Update state (agar 0 hai toh original hi dikhao varna real dikhao)
+            if (calculatedTotal > 0) {
+               setTotalPaidRevenue(calculatedTotal);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching live revenue for Expense Matrix:", error);
+        }
+      };
       
-      const invoicesList = JSON.parse(savedInvoices);
-      // Sirf 'Paid' status wale invoices ka total filter out aur sum karo
-      return invoicesList
-        .filter(inv => inv.status === 'Paid' || inv.status === 'paid')
-        .reduce((sum, inv) => sum + Number(inv.amount), 0);
-    } catch (e) {
-      console.error("Error bridging invoice revenue to Expense Matrix:", e);
-      return 75000; // Safe fallback on parse error
+      fetchLiveRevenue();
     }
-  }, [currentView]); // Recalculates when user switches views to guarantee fresh calculations
+  }, [currentView]);
 
   return (
     <DashboardLayout currentView={currentView} onViewChange={setCurrentView}>
@@ -37,16 +51,11 @@ export default function App() {
       {/* 1. OVERVIEW DASHBOARD STREAM */}
       {currentView === 'dashboard' && (
         <>
-          {/* Top Welcome Header */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-white tracking-tight">Workspace Overview</h1>
             <p className="text-sm text-slate-400 mt-1">Welcome back, Sachin. Here's what's happening with Vantex operations today.</p>
           </div>
-
-          {/* Dynamic Analytical Widgets Section */}
           <MetricsGrid />
-
-          {/* Interactive Chart Engine Section */}
           <AnalyticsChart />
         </>
       )}
@@ -65,7 +74,7 @@ export default function App() {
       {/* 5. CLIENT HUB (MINI CRM) STREAM */}
       {currentView === 'clients' && <ClientHub />}
 
-      {/* 6. SETTINGS & DATA HUB STREAM 👈 Day 7 Integration */}
+      {/* 6. SETTINGS & DATA HUB STREAM */}
       {currentView === 'settings' && <SettingsHub />}
 
     </DashboardLayout>
