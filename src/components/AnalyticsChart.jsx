@@ -4,7 +4,6 @@ export default function AnalyticsChart() {
   const [timeframe, setTimeframe] = useState('6M');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Initial state / fallback data
   const [revenueData, setRevenueData] = useState([
     { month: 'Jan', revenue: 120000 },
     { month: 'Feb', revenue: 190000 },
@@ -14,11 +13,6 @@ export default function AnalyticsChart() {
     { month: 'Jun', revenue: 485000 },
   ]);
 
-  /* 
-     ========================================================
-        DYNAMIC SVG CHART ENGINE (Auto-scales based on Data)
-     ========================================================
-  */
   const maxRevenue = Math.max(...revenueData.map(d => d.revenue)) || 1; 
   const chartWidth = 600;
   const chartHeight = 160;
@@ -32,16 +26,10 @@ export default function AnalyticsChart() {
   const linePath = points.length > 0 ? `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}` : '';
   const areaPath = points.length > 0 ? `${linePath} L ${chartWidth},200 L 0,200 Z` : '';
 
-  // Live Backend API Integration
   useEffect(() => {
     setIsLoading(true);
-    fetch(`https://vantex-nexus-backend.onrender.com/api/revenue?range=${timeframe}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
-      }
-    })
+    // FIX: Removed headers & x-admin-secret from GET request
+    fetch(`https://vantex-nexus-backend.onrender.com/api/revenue?range=${timeframe}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -57,21 +45,18 @@ export default function AnalyticsChart() {
 
   return (
     <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/60 p-6 rounded-xl shadow-xl relative">
-      {/* Loading Overlay */}
       {isLoading && (
         <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[2px] rounded-xl flex items-center justify-center z-10 transition-all">
           <span className="text-xs font-medium text-indigo-400 animate-pulse">Updating analytics...</span>
         </div>
       )}
 
-      {/* Chart Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h3 className="text-base font-bold text-white tracking-tight">Revenue Analytics</h3>
           <p className="text-xs text-slate-400 mt-0.5">Monthly billing and income velocity growth.</p>
         </div>
         
-        {/* Timeframe Toggles */}
         <div className="flex bg-slate-800/40 border border-slate-800 p-1 rounded-lg text-xs font-medium">
           {['1M', '3M', '6M', '1Y'].map((item) => (
             <button
@@ -89,7 +74,6 @@ export default function AnalyticsChart() {
         </div>
       </div>
 
-      {/* SVG Chart Engine */}
       <div className="relative w-full h-64 pt-4">
         <svg className="w-full h-full overflow-visible" viewBox="0 0 600 200" preserveAspectRatio="none">
           <defs>
@@ -99,55 +83,23 @@ export default function AnalyticsChart() {
             </linearGradient>
           </defs>
 
-          {/* Grid Lines */}
           <line x1="0" y1="0" x2="600" y2="0" stroke="rgba(51, 65, 85, 0.15)" strokeDasharray="4" />
           <line x1="0" y1="66" x2="600" y2="66" stroke="rgba(51, 65, 85, 0.15)" strokeDasharray="4" />
           <line x1="0" y1="133" x2="600" y2="133" stroke="rgba(51, 65, 85, 0.15)" strokeDasharray="4" />
           <line x1="0" y1="200" x2="600" y2="200" stroke="rgba(51, 65, 85, 0.3)" />
 
-          {/* Dynamic Area Path */}
-          <path
-            d={areaPath}
-            fill="url(#chartGradient)"
-            className="transition-all duration-500 ease-in-out"
-          />
+          <path d={areaPath} fill="url(#chartGradient)" className="transition-all duration-500 ease-in-out" />
+          <path d={linePath} fill="none" stroke="rgb(99, 102, 241)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-500 ease-in-out" />
 
-          {/* Dynamic Core Vector Trendline */}
-          <path
-            d={linePath}
-            fill="none"
-            stroke="rgb(99, 102, 241)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="transition-all duration-500 ease-in-out"
-          />
-
-          {/* Dynamic Active Pulse Data Nodes */}
           {points.map((point, i) => (
             <g key={i} className="cursor-pointer group/node">
-              <circle 
-                cx={point.x} 
-                cy={point.y} 
-                r="5" 
-                fill="rgb(99, 102, 241)" 
-                stroke="rgb(15, 23, 42)" 
-                strokeWidth="2" 
-                className="transition-all duration-500 ease-in-out"
-              />
-              <circle 
-                cx={point.x} 
-                cy={point.y} 
-                r="9" 
-                fill="rgb(99, 102, 241)" 
-                className="opacity-0 group-hover/node:opacity-20 transition-all duration-200" 
-              />
+              <circle cx={point.x} cy={point.y} r="5" fill="rgb(99, 102, 241)" stroke="rgb(15, 23, 42)" strokeWidth="2" className="transition-all duration-500 ease-in-out" />
+              <circle cx={point.x} cy={point.y} r="9" fill="rgb(99, 102, 241)" className="opacity-0 group-hover/node:opacity-20 transition-all duration-200" />
             </g>
           ))}
         </svg>
       </div>
 
-      {/* Dynamic X-Axis Month Labels */}
       <div className="flex justify-between items-center mt-3 px-1 text-[11px] font-semibold text-slate-500 tracking-wider uppercase">
         {revenueData.map((data, idx) => (
           <span key={idx}>{data.month}</span>

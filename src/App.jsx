@@ -20,13 +20,9 @@ export default function App() {
     if (currentView === 'expenses' || currentView === 'dashboard') {
       const fetchLiveRevenue = async () => {
         try {
-          const response = await fetch(`${API_BASE_URL}/invoices`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
-            }
-          });
+          // YAHAN CHANGE KIYA HAI - Headers aur secret hata diye
+          const response = await fetch(`${API_BASE_URL}/invoices`);
+          
           if (response.ok) {
             const invoicesList = await response.json();
             const calculatedTotal = invoicesList

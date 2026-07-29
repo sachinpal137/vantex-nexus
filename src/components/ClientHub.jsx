@@ -13,13 +13,8 @@ export default function ClientHub() {
   });
 
   useEffect(() => {
-    fetch('https://vantex-nexus-backend.onrender.com/clients', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
-      }
-    })
+    // FIX: Removed headers & x-admin-secret from GET request
+    fetch('https://vantex-nexus-backend.onrender.com/clients')
       .then((res) => {
         if (!res.ok) throw new Error("Network response was not ok");
         return res.json();
@@ -33,17 +28,24 @@ export default function ClientHub() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // FIX: Dynamic Prompt for Security
+    const adminPin = window.prompt("🔒 Admin PIN required to Add Client:");
+    if (!adminPin) return;
+    
     try {
       const response = await fetch('https://vantex-nexus-backend.onrender.com/clients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+          'x-admin-secret': adminPin // Passing prompt PIN
         },
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) throw new Error("Network response was not ok");
+      if (!response.ok) {
+         alert("❌ Unauthorized or Server Error");
+         throw new Error("Network response was not ok");
+      }
 
       const savedClient = await response.json();
       
@@ -74,10 +76,7 @@ export default function ClientHub() {
   };
 
   const getInvoiceTotal = (client) => {
-    const total = client.invoices?.reduce((sum, invoice) => {
-      return sum + (Number(invoice.amount) || 0);
-    }, 0);
-    
+    const total = client.invoices?.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0);
     const finalAmount = total > 0 ? total : Number(client.value || 0);
 
     return new Intl.NumberFormat('en-IN', {
@@ -89,7 +88,6 @@ export default function ClientHub() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
       <div className="flex justify-between items-center bg-slate-900/50 p-6 rounded-2xl border border-slate-800/60 shadow-xl backdrop-blur-sm">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -111,31 +109,17 @@ export default function ClientHub() {
             <h3 className="text-indigo-400 font-medium">Add New Relationship</h3>
           </div>
           
-          <input required type="text" placeholder="Client Name" 
-            className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none text-xs"
-            value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-            
-          <input type="text" placeholder="Company Name" 
-            className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none text-xs"
-            value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})} />
-            
-          <input type="email" placeholder="Email Address" 
-            className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none text-xs"
-            value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+          <input required type="text" placeholder="Client Name" className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none text-xs" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+          <input type="text" placeholder="Company Name" className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none text-xs" value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})} />
+          <input type="email" placeholder="Email Address" className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none text-xs" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
             
           <div className="flex gap-4">
-            <select 
-              className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none flex-1 text-xs"
-              value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}
-            >
+            <select className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none flex-1 text-xs" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
               <option value="Lead">🟡 Lead</option>
               <option value="Active">🟢 Active Project</option>
               <option value="Completed">🔵 Completed</option>
             </select>
-            
-            <input type="number" placeholder="Deal Value (₹)" 
-              className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none flex-1 text-xs"
-              value={formData.value} onChange={e => setFormData({...formData, value: e.target.value})} />
+            <input type="number" placeholder="Deal Value (₹)" className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 focus:border-indigo-500 focus:outline-none flex-1 text-xs" value={formData.value} onChange={e => setFormData({...formData, value: e.target.value})} />
           </div>
 
           <div className="md:col-span-2 mt-2">
@@ -166,18 +150,13 @@ export default function ClientHub() {
             
             <div className="mt-4 pt-4 border-t border-slate-800/60 flex justify-between items-center text-sm">
               <div className="flex gap-3 text-xs">
-                <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded">
-                  🧾 Invoices: {client.invoices?.length || 0}
-                </span>
-                <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded">
-                  ✅ Tasks: {client.tasks?.length || 0}
-                </span>
+                <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded">🧾 Invoices: {client.invoices?.length || 0}</span>
+                <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded">✅ Tasks: {client.tasks?.length || 0}</span>
               </div>
               <div className="font-semibold text-slate-300">
                 <span className="text-emerald-400">{getInvoiceTotal(client)}</span>
               </div>
             </div>
-            
           </div>
         ))}
         
@@ -187,7 +166,6 @@ export default function ClientHub() {
           </div>
         )}
       </div>
-
     </div>
   );
 }
