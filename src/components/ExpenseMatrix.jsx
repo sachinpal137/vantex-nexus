@@ -3,7 +3,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 // Live Backend URL
 const API_BASE_URL = 'https://vantex-nexus-backend.onrender.com';
 
-export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
+// FIX: Default value 75000 se hata kar 0 kar di hai
+export default function ExpenseMatrix({ totalInvoiceRevenue = 0 }) {
   // 1. Core States for Expenses (Moved to Cloud State)
   const [expenses, setExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

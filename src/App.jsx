@@ -12,7 +12,9 @@ const API_BASE_URL = 'https://vantex-nexus-backend.onrender.com';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
-  const [totalPaidRevenue, setTotalPaidRevenue] = useState(75000); 
+  
+  // FIX 1: Initial value ko 75000 se hata kar 0 kar diya
+  const [totalPaidRevenue, setTotalPaidRevenue] = useState(0); 
 
   useEffect(() => {
     if (currentView === 'expenses' || currentView === 'dashboard') {
@@ -31,7 +33,8 @@ export default function App() {
               .filter(inv => inv.status === 'Paid' || inv.status === 'paid')
               .reduce((sum, inv) => sum + Number(inv.amount), 0);
               
-            if (calculatedTotal > 0) setTotalPaidRevenue(calculatedTotal);
+            // FIX 2: Yahan se 'if' condition hata di, ab agar total 0 hoga toh 0 hi set hoga
+            setTotalPaidRevenue(calculatedTotal);
           }
         } catch (error) {
           console.error("Error fetching live revenue:", error);
