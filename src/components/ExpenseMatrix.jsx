@@ -14,7 +14,13 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/expenses`);
+        const response = await fetch(`${API_BASE_URL}/expenses`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+          }
+        });
         if (response.ok) {
           const data = await response.json();
           setExpenses(Array.isArray(data) ? data : []);
@@ -71,7 +77,7 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 75000 }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN || import.meta.env.VITE_ADMIN_SECRET_KEY
+          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
         },
         body: JSON.stringify(newExpensePayload),
       });

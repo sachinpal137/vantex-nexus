@@ -28,7 +28,13 @@ export default function TaskKanban() {
 
   const fetchDeals = async () => {
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch(API_URL, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+        }
+      });
       const data = await response.json();
       setTasks(data);
     } catch (error) {
@@ -61,7 +67,10 @@ export default function TaskKanban() {
     try {
       await fetch(`${API_URL}/${taskId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+        },
         body: JSON.stringify({ status: targetStatus })
       });
     } catch (error) {
@@ -85,7 +94,10 @@ export default function TaskKanban() {
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+        },
         body: JSON.stringify(newDealData)
       });
       
@@ -111,7 +123,11 @@ export default function TaskKanban() {
 
     try {
       await fetch(`${API_URL}/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+        }
       });
     } catch (error) {
       console.error("Deal deletion failed:", error);

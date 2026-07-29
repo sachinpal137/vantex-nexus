@@ -13,7 +13,13 @@ export default function ClientHub() {
   });
 
   useEffect(() => {
-    fetch('https://vantex-nexus-backend.onrender.com/clients')
+    fetch('https://vantex-nexus-backend.onrender.com/clients', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+      }
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Network response was not ok");
         return res.json();
@@ -32,6 +38,7 @@ export default function ClientHub() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
         },
         body: JSON.stringify(formData),
       });

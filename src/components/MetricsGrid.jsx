@@ -12,7 +12,13 @@ export default function MetricsGrid() {
 
   // Component load hote hi live dashboard API call karenge
   useEffect(() => {
-    fetch('https://vantex-nexus-backend.onrender.com/dashboard-stats')
+    fetch('https://vantex-nexus-backend.onrender.com/dashboard-stats', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+      }
+    })
       .then(res => res.json())
       .then(data => {
         setDashboardData({

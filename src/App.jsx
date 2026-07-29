@@ -11,33 +11,30 @@ import SettingsHub from './components/SettingsHub';
 const API_BASE_URL = 'https://vantex-nexus-backend.onrender.com';
 
 export default function App() {
-  // Global view state to manage workspace toggling
   const [currentView, setCurrentView] = useState('dashboard');
-  
-  // Live Revenue State
-  const [totalPaidRevenue, setTotalPaidRevenue] = useState(75000); // Default fallback
+  const [totalPaidRevenue, setTotalPaidRevenue] = useState(75000); 
 
-  // Fetch live invoices from Cloud DB when user switches to 'expenses' view
   useEffect(() => {
     if (currentView === 'expenses' || currentView === 'dashboard') {
       const fetchLiveRevenue = async () => {
         try {
-          const response = await fetch(`${API_BASE_URL}/invoices`);
+          const response = await fetch(`${API_BASE_URL}/invoices`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+            }
+          });
           if (response.ok) {
             const invoicesList = await response.json();
-            
-            // Filter only 'Paid' status and sum amounts
             const calculatedTotal = invoicesList
               .filter(inv => inv.status === 'Paid' || inv.status === 'paid')
               .reduce((sum, inv) => sum + Number(inv.amount), 0);
               
-            // Update state (agar 0 hai toh original hi dikhao varna real dikhao)
-            if (calculatedTotal > 0) {
-               setTotalPaidRevenue(calculatedTotal);
-            }
+            if (calculatedTotal > 0) setTotalPaidRevenue(calculatedTotal);
           }
         } catch (error) {
-          console.error("Error fetching live revenue for Expense Matrix:", error);
+          console.error("Error fetching live revenue:", error);
         }
       };
       
@@ -47,8 +44,6 @@ export default function App() {
 
   return (
     <DashboardLayout currentView={currentView} onViewChange={setCurrentView}>
-      
-      {/* 1. OVERVIEW DASHBOARD STREAM */}
       {currentView === 'dashboard' && (
         <>
           <div className="mb-8">
@@ -59,24 +54,11 @@ export default function App() {
           <AnalyticsChart />
         </>
       )}
-
-      {/* 2. TASK KANBAN PIPELINE STREAM */}
       {currentView === 'kanban' && <TaskKanban />}
-
-      {/* 3. INVOICE VAULT TRANSACTION STREAM */}
       {currentView === 'invoices' && <InvoiceVault />}
-
-      {/* 4. EXPENSE MATRIX & ANALYTICS STREAM */}
-      {currentView === 'expenses' && (
-        <ExpenseMatrix totalInvoiceRevenue={totalPaidRevenue} />
-      )}
-
-      {/* 5. CLIENT HUB (MINI CRM) STREAM */}
+      {currentView === 'expenses' && <ExpenseMatrix totalInvoiceRevenue={totalPaidRevenue} />}
       {currentView === 'clients' && <ClientHub />}
-
-      {/* 6. SETTINGS & DATA HUB STREAM */}
       {currentView === 'settings' && <SettingsHub />}
-
     </DashboardLayout>
   );
 }

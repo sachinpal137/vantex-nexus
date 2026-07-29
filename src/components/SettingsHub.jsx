@@ -24,14 +24,19 @@ export default function SettingsHub() {
     setStatus('⏳ Fetching cloud data... Please wait.');
     
     try {
-      // Fetch all core modules data from live backend in parallel
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-admin-secret': SECRET_PIN
+      };
+
+      // Fetch all core modules data from live backend in parallel with headers
       const [dealsRes, clientsRes, invoicesRes, expensesRes, servicesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/deals`),
-        fetch(`${API_BASE_URL}/clients`),
-        fetch(`${API_BASE_URL}/invoices`),
-        fetch(`${API_BASE_URL}/expenses`),
+        fetch(`${API_BASE_URL}/deals`, { headers }),
+        fetch(`${API_BASE_URL}/clients`, { headers }),
+        fetch(`${API_BASE_URL}/invoices`, { headers }),
+        fetch(`${API_BASE_URL}/expenses`, { headers }),
         // Fallback added just in case 'services' endpoint isn't fully ready yet
-        fetch(`${API_BASE_URL}/services`).catch(() => ({ ok: true, json: () => [] })) 
+        fetch(`${API_BASE_URL}/services`, { headers }).catch(() => ({ ok: true, json: () => [] })) 
       ]);
 
       const allData = {

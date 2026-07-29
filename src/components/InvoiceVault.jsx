@@ -23,7 +23,13 @@ export default function InvoiceVault() {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/invoices`);
+        const response = await fetch(`${API_BASE_URL}/invoices`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+          }
+        });
         
         const contentType = response.headers.get("content-type");
         if (!response.ok || !contentType || !contentType.includes("application/json")) {
@@ -120,8 +126,7 @@ export default function InvoiceVault() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // 👇 YAHAN PAR CHANGE KIYA HAI (ADMIN SECRET HEADER ADDED) 👇
-          'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET_KEY || 'TERA_ACTUAL_SECRET_KEY'
+          'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
         },
         body: JSON.stringify(newInvoice),
       });

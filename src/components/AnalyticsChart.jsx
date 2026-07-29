@@ -35,7 +35,13 @@ export default function AnalyticsChart() {
   // Live Backend API Integration
   useEffect(() => {
     setIsLoading(true);
-    fetch(`https://vantex-nexus-backend.onrender.com/api/revenue?range=${timeframe}`)
+    fetch(`https://vantex-nexus-backend.onrender.com/api/revenue?range=${timeframe}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-secret': import.meta.env.VITE_ADMIN_PIN
+      }
+    })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
