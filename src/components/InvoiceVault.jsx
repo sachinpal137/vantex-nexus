@@ -39,6 +39,7 @@ export default function InvoiceVault() {
     fetchInvoices();
   }, []);
 
+  // FIX 1: Enhanced Crash Protection for Mathematical Computations
   const calculateInvoiceMetrics = (items, taxPercent) => {
     let safeItems = [];
     if (Array.isArray(items)) {
@@ -46,10 +47,18 @@ export default function InvoiceVault() {
     } else if (typeof items === 'string') {
       try { safeItems = JSON.parse(items); } catch (e) { safeItems = []; }
     }
-    const subtotal = safeItems.reduce((acc, item) => acc + ((item.qty || 0) * (item.rate || 0)), 0);
+    
+    // Yahan humne Number() lagaya hai taaki undefined crash na kare
+    const subtotal = safeItems.reduce((acc, item) => {
+      const q = Number(item?.qty) || 0;
+      const r = Number(item?.rate) || 0;
+      return acc + (q * r);
+    }, 0);
+    
     const validTaxPercent = Number(taxPercent) || 0;
     const taxAmount = Math.round(subtotal * (validTaxPercent / 100));
     const total = subtotal + taxAmount;
+    
     return { subtotal, taxAmount, total, safeItems };
   };
 
@@ -436,14 +445,21 @@ export default function InvoiceVault() {
               <tbody className="divide-y divide-slate-900/40 text-xs text-slate-300">
                 {(() => {
                   const { safeItems } = calculateInvoiceMetrics(viewingInvoice.items, viewingInvoice.taxRate);
-                  return safeItems.map((item, i) => (
-                    <tr key={item.id || i}>
-                      <td className="py-3 font-medium text-slate-200">{item.desc}</td>
-                      <td className="py-3 text-center font-mono">{item.qty}</td>
-                      <td className="py-3 text-right font-mono">₹{item.rate.toLocaleString('en-IN')}</td>
-                      <td className="py-3 text-right font-mono text-slate-100">₹{(item.qty * item.rate).toLocaleString('en-IN')}</td>
-                    </tr>
-                  ));
+                  return safeItems.map((item, i) => {
+                    // FIX 2: Crash Proofing data rendering
+                    const qty = Number(item?.qty) || 0;
+                    const rate = Number(item?.rate) || 0;
+                    const desc = item?.desc || 'Unknown Operation';
+
+                    return (
+                      <tr key={item?.id || i}>
+                        <td className="py-3 font-medium text-slate-200">{desc}</td>
+                        <td className="py-3 text-center font-mono">{qty}</td>
+                        <td className="py-3 text-right font-mono">₹{rate.toLocaleString('en-IN')}</td>
+                        <td className="py-3 text-right font-mono text-slate-100">₹{(qty * rate).toLocaleString('en-IN')}</td>
+                      </tr>
+                    );
+                  });
                 })()}
               </tbody>
             </table>
@@ -452,10 +468,12 @@ export default function InvoiceVault() {
               <div className="w-64 space-y-2 text-slate-400">
                 {(() => {
                   const { subtotal, taxAmount, total } = calculateInvoiceMetrics(viewingInvoice.items, viewingInvoice.taxRate);
+                  const validTaxRate = Number(viewingInvoice.taxRate) || 0;
+                  
                   return (
                     <>
                       <div className="flex justify-between"><span>Subtotal Allocation:</span><span className="text-slate-200">₹{subtotal.toLocaleString('en-IN')}</span></div>
-                      <div className="flex justify-between"><span>Computed GST ({viewingInvoice.taxRate}%):</span><span className="text-slate-200">₹{taxAmount.toLocaleString('en-IN')}</span></div>
+                      <div className="flex justify-between"><span>Computed GST ({validTaxRate}%):</span><span className="text-slate-200">₹{taxAmount.toLocaleString('en-IN')}</span></div>
                       <div className="flex justify-between border-t border-slate-900 pt-2 text-sm font-bold">
                         <span className="text-indigo-400">Total Obligation:</span>
                         <span className="text-emerald-400">₹{total.toLocaleString('en-IN')}</span>
