@@ -11,7 +11,6 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 0 }) {
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
-        // FIX: GET request made public
         const response = await fetch(`${API_BASE_URL}/expenses`);
         if (response.ok) {
           const data = await response.json();
@@ -47,7 +46,6 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 0 }) {
     e.preventDefault();
     if (!formData.title || !formData.amount) return;
     
-    // FIX: Prompt implementation
     const adminPin = window.prompt("🔒 Admin PIN required to Log Expense:");
     if (!adminPin) return;
 
@@ -63,7 +61,7 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 0 }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': adminPin // Passing prompt PIN
+          'x-admin-secret': adminPin
         },
         body: JSON.stringify(newExpensePayload),
       });
@@ -82,10 +80,6 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 0 }) {
       setIsSubmitting(false);
     }
   };
-
-  const chartHeight = 160;
-  const barWidth = 50;
-  const gap = 40;
 
   return (
     <div className="p-6 bg-slate-900 text-slate-100 min-h-screen font-sans">
@@ -172,37 +166,55 @@ export default function ExpenseMatrix({ totalInvoiceRevenue = 0 }) {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 p-5 rounded-xl flex flex-col justify-between">
+        {/* NAYA UI: Category Breakdown (Gradient HTML/CSS Chart) */}
+        <div className="bg-slate-800 border border-slate-700 p-5 rounded-xl flex flex-col h-full min-h-[400px]">
           <div>
             <h2 className="text-lg font-semibold text-white mb-2">Category Breakdown</h2>
-            <p className="text-xs text-slate-400 mb-6">Native high-fidelity SVG geometry rendering pipeline.</p>
-            {categoryTotals.length === 0 && !isLoading ? (
-              <div className="h-40 flex items-center justify-center text-sm text-slate-500">Awaiting financial data...</div>
-            ) : (
-              <div className="w-full flex justify-center bg-slate-900/40 p-4 rounded-lg border border-slate-700/50">
-                <svg width={(barWidth + gap) * categoryTotals.length + gap} height={chartHeight + 40} className="overflow-visible">
-                  {categoryTotals.map((item, index) => {
-                    const currentBarHeight = (item.value / maxChartValue) * chartHeight;
-                    const xCoordinate = gap + index * (barWidth + gap);
-                    const yCoordinate = chartHeight - currentBarHeight + 20;
-
-                    return (
-                      <g key={item.name} className="group">
-                        <text x={xCoordinate + barWidth / 2} y={yCoordinate - 8} textAnchor="middle" className="text-[10px] fill-blue-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          ₹{item.value.toLocaleString()}
-                        </text>
-                        <rect x={xCoordinate} y={yCoordinate} width={barWidth} height={currentBarHeight || 2} rx={6} className="fill-blue-500/80 group-hover:fill-blue-400 transition-all duration-300 cursor-pointer" />
-                        <text x={xCoordinate + barWidth / 2} y={chartHeight + 35} textAnchor="middle" className="text-[10px] fill-slate-400 font-medium tracking-tight">
-                          {item.name.length > 8 ? `${item.name.slice(0, 6)}..` : item.name}
-                        </text>
-                      </g>
-                    );
-                  })}
-                  <line x1={0} y1={chartHeight + 20} x2={(barWidth + gap) * categoryTotals.length + gap} y2={chartHeight + 20} className="stroke-slate-700 stroke-1" />
-                </svg>
-              </div>
-            )}
+            <p className="text-xs text-slate-400 mb-6">Live expense distribution matrix.</p>
           </div>
+          
+          {categoryTotals.length === 0 && !isLoading ? (
+            <div className="flex-1 flex items-center justify-center text-sm text-slate-500">Awaiting financial data...</div>
+          ) : (
+            <div className="flex-1 flex items-end justify-between gap-2 sm:gap-4 relative pt-10 pb-6 w-full mt-2">
+              
+              {/* Background Grid Lines */}
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-6 pt-10">
+                <div className="border-b border-slate-700/40 w-full h-0"></div>
+                <div className="border-b border-slate-700/40 w-full h-0"></div>
+                <div className="border-b border-slate-700/40 w-full h-0"></div>
+                <div className="border-b border-slate-700/40 w-full h-0"></div>
+              </div>
+
+              {categoryTotals.map((item) => {
+                const heightPercent = item.value > 0 ? (item.value / maxChartValue) * 100 : 0;
+
+                return (
+                  <div key={item.name} className="group relative flex flex-col items-center justify-end w-full h-full pb-6 z-10">
+                    
+                    {/* Hover Tooltip */}
+                    <div className="absolute -top-8 bg-slate-900 text-white text-[10px] font-mono px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl border border-slate-700 whitespace-nowrap z-20 pointer-events-none">
+                      ₹{item.value.toLocaleString()}
+                    </div>
+
+                    {/* Gradient Bar */}
+                    <div
+                      className="w-full max-w-[2.5rem] bg-gradient-to-t from-blue-900/60 to-blue-500 hover:to-blue-400 rounded-t-md transition-all duration-500 border-t border-blue-400/50 cursor-pointer"
+                      style={{ 
+                        height: `${heightPercent}%`, 
+                        minHeight: item.value > 0 ? '4px' : '0px' 
+                      }}
+                    ></div>
+
+                    {/* X-Axis Label */}
+                    <div className="absolute bottom-0 w-full text-center text-[10px] font-mono text-slate-400 truncate px-1">
+                      {item.name.length > 8 ? `${item.name.slice(0, 6)}..` : item.name}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
